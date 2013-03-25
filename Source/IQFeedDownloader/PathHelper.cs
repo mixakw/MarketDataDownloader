@@ -8,7 +8,7 @@ namespace IQFeedDownloader
 	{
 		public bool CreateDirectory(string folder)
 		{
-			if (folder == null) throw new ArgumentNullException("folder");
+			if (string.IsNullOrEmpty(folder)) throw new ArgumentNullException("folder");
 
 			bool successfulCreating = Directory.Exists(folder);
 
@@ -21,15 +21,15 @@ namespace IQFeedDownloader
 			return successfulCreating;
 		}
 
-		private bool IsValidPath(string foldername)
+		private bool IsValidPath(string folder)
 		{
-			var invalidPathChars = Path.GetInvalidPathChars();
+			char[] invalidPathChars = Path.GetInvalidPathChars();
 
 			bool isValidPath = true;
 
 			foreach (var symbol in invalidPathChars)
 			{
-				if (foldername.Contains(symbol.ToString(CultureInfo.InvariantCulture)))
+				if (folder.Contains(symbol.ToString(CultureInfo.InvariantCulture)))
 				{
 					isValidPath = false;
 				}

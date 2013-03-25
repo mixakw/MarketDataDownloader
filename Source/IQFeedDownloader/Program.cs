@@ -10,7 +10,7 @@ namespace IQFeedDownloader
 		{
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new DownloaderForm());
+			Application.Run(new MainForm());
 		}
 	}
 }

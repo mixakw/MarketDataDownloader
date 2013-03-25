@@ -47,20 +47,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DownloaderEntities.cs" />
+    <Compile Include="Response.cs" />
     <Compile Include="Logger\RichTextBoxAppender.cs" />
     <Compile Include="PathHelper.cs" />
-    <Compile Include="DownloaderHelper.cs" />
-    <Compile Include="DownloaderForm.cs">
+    <Compile Include="Helper.cs" />
+    <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="DownloaderForm.Designer.cs">
-      <DependentUpon>DownloaderForm.cs</DependentUpon>
+    <Compile Include="MainForm.Designer.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="DownloaderForm.resx">
-      <DependentUpon>DownloaderForm.cs</DependentUpon>
+    <Compile Include="Request.cs" />
+    <EmbeddedResource Include="MainForm.resx">
+      <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -84,14 +85,12 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="AppData\ReadMe.txt" />
-    <Content Include="AppData\Symbols.txt" />
-    <Content Include="AppData\SymbolsAll.txt" />
     <Content Include="Logger\log4net.dll" />
     <Content Include="TestData\DailyData.txt" />
     <Content Include="TestData\IntradayData.txt" />
     <Content Include="TestData\TickData.txt" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
