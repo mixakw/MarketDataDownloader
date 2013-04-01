@@ -391,7 +391,7 @@
 			this.tabSetup.Padding = new System.Windows.Forms.Padding(3);
 			this.tabSetup.Size = new System.Drawing.Size(470, 279);
 			this.tabSetup.TabIndex = 1;
-			this.tabSetup.Text = "Setup";
+			this.tabSetup.Text = "Parameters";
 			this.tabSetup.UseVisualStyleBackColor = true;
 			// 
 			// cbDateTimeSeparator
@@ -467,7 +467,7 @@
 			this.label3.TabIndex = 0;
 			this.label3.Text = "DateTime Format";
 			// 
-			// DownloaderForm
+			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -476,7 +476,7 @@
 			this.Controls.Add(this.label1);
 			this.Controls.Add(this.rtbLog);
 			this.Controls.Add(this.statusStrip1);
-			this.Name = "DownloaderForm";
+			this.Name = "MainForm";
 			this.Text = "Market Data Downloader 2.1 (by AnCh)";
 			this.statusStrip1.ResumeLayout(false);
 			this.statusStrip1.PerformLayout();

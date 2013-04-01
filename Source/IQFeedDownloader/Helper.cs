@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
-
 using log4net;
 
 namespace IQFeedDownloader
 {
 	public class Helper
 	{
-		#region Constants
-
 		private const string NoDataError = "NO_DATA";
 		private const string EndMessage = "ENDMSG";
 		private const string SyntaxError = "SYNTAX_ERROR";
@@ -22,26 +19,24 @@ namespace IQFeedDownloader
 
 		private const byte EOL = 0x0;
 
-		#endregion
-
-		#region Variables
-
-		private static readonly ILog Logger = LogManager.GetLogger(typeof(Helper));
+		private ILog _logger;
 		private TcpClient _socket;
 		private NetworkStream _networkStream;
 
-		#endregion
+		private Parameters _parameters;
+		private Response _response;
 
-		#region Public Properties
+		public Helper()
+		{
+			_parameters = new Parameters();
+			_response = new Response();
+			_logger = LogManager.GetLogger(typeof(Helper));
+		}
 
 		public TcpClient Socket
 		{
 			get { return _socket; }
 		}
-
-		#endregion Public Properties
-
-		#region Public Methods
 
 		public void OpenConnection()
 		{
@@ -51,15 +46,14 @@ namespace IQFeedDownloader
 			}
 			catch (SocketException)
 			{
-
 			}
 		}
 
-		public string CreateQuery(Request r)
+		public string CreateQuery(Request request)
 		{
-			if (r == null) throw new ArgumentNullException("r");
+			if (request == null) throw new ArgumentNullException("request");
 
-			switch (r.TimeFrame)
+			switch (request.TimeFrame)
 			{
 				case "Tick Days":
 					//HTD,[Symbol],[Days],[MaxDatapoints],[BeginFilterTime],[EndFilterTime],[DataDirection],[RequestID],[DatapointsPerSend]<CR><LF> 
@@ -72,14 +66,14 @@ namespace IQFeedDownloader
 					//[DataDirection] - Optional - '0' (default) for "newest to oldest" or '1' for "oldest to newest".
 					//[RequestID] - Optional - Will be sent back at the start of each line of data returned for this request.
 					//[DatapointsPerSend] - Optional - Specifies the number of data points that IQConnect.exe will queue before attempting to send across the socket to your app.
-					return r.TickDaysHeader + r.Delimiter +
-							r.CurrentSymbol + r.Delimiter +
-							r.Days + r.Delimiter +
-							r.MaxDatapoints + r.Delimiter +
-							r.BeginFilterTime + r.Delimiter +
-							r.EndFilterTime + r.Delimiter +
-							r.DataDirection + r.Delimiter +
-							r.DatapointsPerSend + r.TerminatingCharacter;
+					return request.TickDaysHeader + request.Delimiter +
+						   request.CurrentSymbol + request.Delimiter +
+						   request.Days + request.Delimiter +
+						   request.MaxDatapoints + request.Delimiter +
+						   request.BeginFilterTime + request.Delimiter +
+						   request.EndFilterTime + request.Delimiter +
+						   request.DataDirection + request.Delimiter +
+						   request.DatapointsPerSend + request.Terminater;
 
 				case "Tick Interval":
 					//HTT,[Symbol],[BeginDate BeginTime],[EndDate EndTime],[MaxDatapoints],[BeginFilterTime],[EndFilterTime],[DataDirection],[RequestID],[DatapointsPerSend]<CR><LF> 
@@ -93,15 +87,15 @@ namespace IQFeedDownloader
 					//[DataDirection] - Optional - '0' (default) for "newest to oldest" or '1' for "oldest to newest".
 					//[RequestID] - Optional - Will be sent back at the start of each line of data returned for this request.
 					//[DatapointsPerSend] - Optional - Specifies the number of data points that IQConnect.exe will queue before attempting to send across the socket to your app. 
-					return r.TickIntervalHeader + r.Delimiter +
-							r.CurrentSymbol + r.Delimiter +
-							r.BeginDateTime + r.Delimiter +
-							r.EndDateTime + r.Delimiter +
-							r.MaxDatapoints + r.Delimiter +
-							r.BeginFilterTime + r.Delimiter +
-							r.EndFilterTime + r.Delimiter +
-							r.DataDirection + r.Delimiter +
-							r.DatapointsPerSend + r.TerminatingCharacter;
+					return request.TickIntervalHeader + request.Delimiter +
+						   request.CurrentSymbol + request.Delimiter +
+						   request.BeginDateTime + request.Delimiter +
+						   request.EndDateTime + request.Delimiter +
+						   request.MaxDatapoints + request.Delimiter +
+						   request.BeginFilterTime + request.Delimiter +
+						   request.EndFilterTime + request.Delimiter +
+						   request.DataDirection + request.Delimiter +
+						   request.DatapointsPerSend + request.Terminater;
 
 				case "Intraday Days":
 					//HID,[Symbol],[Interval],[Days],[MaxDatapoints],[BeginFilterTime],[EndFilterTime],[DataDirection],[RequestID],[DatapointsPerSend]<CR><LF> 
@@ -115,15 +109,15 @@ namespace IQFeedDownloader
 					//[DataDirection] - Optional - '0' (default) for "newest to oldest" or '1' for "oldest to newest".
 					//[RequestID] - Optional - Will be sent back at the start of each line of data returned for this request.
 					//[DatapointsPerSend] - Optional - Specifies the number of data points that IQConnect.exe will queue before attempting to send across the socket to your app. 
-					return r.IntradayDaysHeader + r.Delimiter +
-							r.CurrentSymbol + r.Delimiter +
-							r.Interval + r.Delimiter +
-							r.Days + r.Delimiter +
-							r.DatapointsPerSend + r.Delimiter +
-							r.BeginFilterTime + r.Delimiter +
-							r.EndFilterTime + r.Delimiter +
-							r.DataDirection + r.Delimiter +
-							r.DatapointsPerSend + r.TerminatingCharacter;
+					return request.IntradayDaysHeader + request.Delimiter +
+						   request.CurrentSymbol + request.Delimiter +
+						   request.Interval + request.Delimiter +
+						   request.Days + request.Delimiter +
+						   request.DatapointsPerSend + request.Delimiter +
+						   request.BeginFilterTime + request.Delimiter +
+						   request.EndFilterTime + request.Delimiter +
+						   request.DataDirection + request.Delimiter +
+						   request.DatapointsPerSend + request.Terminater;
 
 				case "Intraday Interval":
 					//HIT,[Symbol],[Interval],[BeginDate BeginTime],[EndDate EndTime],[MaxDatapoints],[BeginFilterTime],[EndFilterTime],[DataDirection],[RequestID],[DatapointsPerSend]<CR><LF> 
@@ -138,16 +132,16 @@ namespace IQFeedDownloader
 					//[DataDirection] - Optional - '0' (default) for "newest to oldest" or '1' for "oldest to newest".
 					//[RequestID] - Optional - Will be sent back at the start of each line of data returned for this request.
 					//[DatapointsPerSend] - Optional - Specifies the number of data points that IQConnect.exe will queue before attempting to send across the socket to your app. 
-					return r.IntradayIntervalHeader + r.Delimiter +
-							r.CurrentSymbol + r.Delimiter +
-							r.Interval + r.Delimiter +
-							r.BeginDateTime + r.Delimiter +
-							r.EndDateTime + r.Delimiter +
-							r.MaxDatapoints + r.Delimiter +
-							r.BeginFilterTime + r.Delimiter +
-							r.EndFilterTime + r.Delimiter +
-							r.DataDirection + r.Delimiter +
-							r.DatapointsPerSend + r.TerminatingCharacter;
+					return request.IntradayIntervalHeader + request.Delimiter +
+						   request.CurrentSymbol + request.Delimiter +
+						   request.Interval + request.Delimiter +
+						   request.BeginDateTime + request.Delimiter +
+						   request.EndDateTime + request.Delimiter +
+						   request.MaxDatapoints + request.Delimiter +
+						   request.BeginFilterTime + request.Delimiter +
+						   request.EndFilterTime + request.Delimiter +
+						   request.DataDirection + request.Delimiter +
+						   request.DatapointsPerSend + request.Terminater;
 
 				case "Daily Days":
 					//HDX,[Symbol],[MaxDatapoints],[DataDirection],[RequestID],[DatapointsPerSend]<CR><LF> 
@@ -157,11 +151,11 @@ namespace IQFeedDownloader
 					//[DataDirection] - Optional - '0' (default) for "newest to oldest" or '1' for "oldest to newest".
 					//[RequestID] - Optional - Will be sent back at the start of each line of data returned for this request.
 					//[DatapointsPerSend] - Optional - Specifies the number of data points that IQConnect.exe will queue before attempting to send across the socket to your app. 
-					return r.DailyDaysHeader + r.Delimiter +
-							r.CurrentSymbol + r.Delimiter +
-							r.DatapointsPerSend + r.Delimiter +
-							r.DataDirection + r.Delimiter +
-							r.DatapointsPerSend + r.TerminatingCharacter;
+					return request.DailyDaysHeader + request.Delimiter +
+						   request.CurrentSymbol + request.Delimiter +
+						   request.DatapointsPerSend + request.Delimiter +
+						   request.DataDirection + request.Delimiter +
+						   request.DatapointsPerSend + request.Terminater;
 
 				case "Daily Interval":
 					//HDT,[Symbol],[BeginDate],[EndDate],[MaxDatapoints],[DataDirection],[RequestID],[DatapointsPerSend]<CR><LF> 
@@ -173,13 +167,13 @@ namespace IQFeedDownloader
 					//[DataDirection] - Optional - '0' (default) for "newest to oldest" or '1' for "oldest to newest".
 					//[RequestID] - Optional - Will be sent back at the start of each line of data returned for this request.
 					//[DatapointsPerSend] - Optional - Specifies the number of data points that IQConnect.exe will queue before attempting to send across the socket to your app. 
-					return r.DailyIntervalHeader + r.Delimiter +
-							r.CurrentSymbol + r.Delimiter +
-							r.BeginDateTime + r.Delimiter +
-							r.EndDateTime + r.Delimiter +
-							r.MaxDatapoints + r.Delimiter +
-							r.DataDirection + r.Delimiter +
-							r.DatapointsPerSend + r.TerminatingCharacter;
+					return request.DailyIntervalHeader + request.Delimiter +
+						   request.CurrentSymbol + request.Delimiter +
+						   request.BeginDateTime + request.Delimiter +
+						   request.EndDateTime + request.Delimiter +
+						   request.MaxDatapoints + request.Delimiter +
+						   request.DataDirection + request.Delimiter +
+						   request.DatapointsPerSend + request.Terminater;
 
 				case "Weekly Days":
 					//HWX,[Symbol],[MaxDatapoints],[DataDirection],[RequestID],[DatapointsPerSend]<CR><LF> 
@@ -189,11 +183,11 @@ namespace IQFeedDownloader
 					//[DataDirection] - Optional - '0' (default) for "newest to oldest" or '1' for "oldest to newest".
 					//[RequestID] - Optional - Will be sent back at the start of each line of data returned for this request.
 					//[DatapointsPerSend] - Optional - Specifies the number of data points that IQConnect.exe will queue before attempting to send across the socket to your app. 
-					return r.WeeklyDaysHeader + r.Delimiter +
-							r.CurrentSymbol + r.Delimiter +
-							r.MaxDatapoints + r.Delimiter +
-							r.DataDirection + r.Delimiter +
-							r.DatapointsPerSend + r.TerminatingCharacter;
+					return request.WeeklyDaysHeader + request.Delimiter +
+						   request.CurrentSymbol + request.Delimiter +
+						   request.MaxDatapoints + request.Delimiter +
+						   request.DataDirection + request.Delimiter +
+						   request.DatapointsPerSend + request.Terminater;
 
 				case "Monthly Days":
 					//HMX,[Symbol],[MaxDatapoints],[DataDirection],[RequestID],[DatapointsPerSend]<CR><LF> 
@@ -203,19 +197,19 @@ namespace IQFeedDownloader
 					//[DataDirection] - Optional - '0' (default) for "newest to oldest" or '1' for "oldest to newest".
 					//[RequestID] - Optional - Will be sent back at the start of each line of data returned for this request.
 					//[DatapointsPerSend] - Optional - Specifies the number of data points that IQConnect.exe will queue before attempting to send across the socket to your app. 
-					return r.MonthlyDaysHeader + r.Delimiter +
-							r.CurrentSymbol + r.Delimiter +
-							r.MaxDatapoints + r.Delimiter +
-							r.DataDirection + r.Delimiter +
-							r.DatapointsPerSend + r.TerminatingCharacter;
+					return request.MonthlyDaysHeader + request.Delimiter +
+						   request.CurrentSymbol + request.Delimiter +
+						   request.MaxDatapoints + request.Delimiter +
+						   request.DataDirection + request.Delimiter +
+						   request.DatapointsPerSend + request.Terminater;
 
 				default:
-					Logger.Error("Request error");
+					_logger.Error("Request error");
 					return string.Empty;
 			}
 		}
 
-		public void GetData(string request, string folder, Request r)
+		public void GetData(string request, string folder, Request input)
 		{
 			if (string.IsNullOrEmpty(request)) throw new ArgumentNullException("request");
 
@@ -223,50 +217,45 @@ namespace IQFeedDownloader
 			{
 				SendRequest(request);
 
-				StreamReader streamReader = new StreamReader(_networkStream);
-
-				if (IsValidContent(streamReader))
+				using (var streamReader = new StreamReader(_networkStream))
 				{
-					int index = 0;
-					int accumulationIndex = 0;
-					string data = string.Empty;
-					List<string> inboundData = new List<string>();
-
-					while (true)
+					if (IsValidContent(streamReader))
 					{
-						data = streamReader.ReadLine();
+						int index = 0;
+						int accumulationIndex = 0;
+						var inboundData = new List<string>();
 
-						if (!data.Contains(EndMessage))
+						while (true)
 						{
-							inboundData.Add(data);
-							index++;
+							string data = streamReader.ReadLine();
 
-							if (index == 100000)
+							if (data != null && !data.Contains(EndMessage))
 							{
-								accumulationIndex = accumulationIndex + index;
-								Logger.Info(String.Format("{0} entries of data processed", accumulationIndex));
-								ParseData(r, folder, inboundData);
-								inboundData.Clear();
-								index = 0;
+								inboundData.Add(data);
+								index++;
+
+								if (index == 100000)
+								{
+									accumulationIndex = accumulationIndex + index;
+									_logger.Info(string.Format("{0} entries of data processed", accumulationIndex));
+									ParseData(input, folder, inboundData);
+									inboundData.Clear();
+									index = 0;
+								}
 							}
+
+							if (index != 0)
+							{
+								_logger.Info(String.Format("{0} entries of data processed", index));
+								ParseData(input, folder, inboundData);
+							}
+
+							inboundData.Clear();
 						}
 					}
-
-					if (index == 0) return;
-
-					Logger.Info(String.Format("{0} entries of data processed", index));
-
-					streamWriter = GetWriterToFile(folder, symbol);
-					ParseData(timeframeName, inboundData, streamWriter);
-					streamWriter.Close();
-
-					inboundData.Clear();
 				}
 			}
-
 		}
-
-		#endregion
 
 		#region Private Methods
 
@@ -281,7 +270,7 @@ namespace IQFeedDownloader
 
 			if (!_networkStream.CanRead && !_networkStream.CanWrite)
 			{
-				Logger.Error("You cannot read/write data from this stream.");
+				_logger.Error("You cannot read/write data from this stream.");
 				isSuccessful = false;
 				_networkStream.Close();
 			}
@@ -302,46 +291,48 @@ namespace IQFeedDownloader
 			return new StreamWriter(fs);
 		}
 
-		private bool IsValidContent(StreamReader reader)
+		private bool IsValidContent(TextReader reader)
 		{
 			bool isValidContent = true;
 
 			string line = reader.ReadLine();
 
-			if (line.Contains(NoDataError))
+			if (line != null)
 			{
-				isValidContent = false;
-				Logger.Error("No data");
-			}
+				if (line.Contains(NoDataError))
+				{
+					isValidContent = false;
+					_logger.Error("No data");
+				}
 
-			if (line.Contains(InvalidSymbolError))
-			{
-				isValidContent = false;
-				Logger.Error("Invalid symbol");
-			}
+				if (line.Contains(InvalidSymbolError))
+				{
+					isValidContent = false;
+					_logger.Error("Invalid symbol");
+				}
 
-			if (line.Contains(SyntaxError))
-			{
-				isValidContent = false;
-				Logger.Error("Syntax error");
+				if (line.Contains(SyntaxError))
+				{
+					isValidContent = false;
+					_logger.Error("Syntax error");
+				}
 			}
 
 			return isValidContent;
 		}
 
-		private void ParseData(Request r, string folder, List<string> inboundData)
+		private void ParseData(Request request, string folder, IList<string> inputData)
 		{
-			if (inboundData.Count == 0 || inboundData[0].Substring(0, 1) == "!")
+			if (inputData.Count == 0 || inputData[0].Substring(0, 1) == "!")
 				return;
 
-			using (StreamWriter writerToFile = GetWriterToFile(folder, r.CurrentSymbol))
+			using (StreamWriter writerToFile = GetWriterToFile(folder, request.CurrentSymbol))
 			{
-				foreach (var data in inboundData)
+				foreach (var input in inputData)
 				{
-					var splittedData = data.Split(',');
-					var response = new Response();
+					var data = input.Split(',');
 
-					switch (r.TimeFrame)
+					switch (request.TimeFrame)
 					{
 						//"HTD"
 						//Request ID. Text.
@@ -356,20 +347,18 @@ namespace IQFeedDownloader
 						//Ask Size. Integer. Example: 100
 						//Basis For Last. Character. Current Possible values are 'C' (normal trade) or 'E' (extended trade). 
 						case "Tick Days":
-							response.ParseMarketData(splittedData, true);
-							response.ParseDateTime(splittedData, DateFormat, TimeFormat);
+							_response.ParseTickMarketData(data);
+							_response.ParseDateTime(data);
 
-							writerToFile.WriteLine(
-								response.TickId + r.Delimiter +
-								response.TradeType + r.Delimiter +
-								response.FormattedDateTime(DateTimeSeparator) +
-								",{0},{1},{2},{3},{4},{5}",
-								response.Last,
-								response.LastSize,
-								response.Bid,
-								response.Ask,
-								response.BidSize,
-								response.AskSize);
+							writerToFile.WriteLine(_response.TickId +_parameters.OutputDelimiter +
+												   _response.TradeType +_parameters.OutputDelimiter +
+												   _response.ResponseDateTime + _parameters.OutputDelimiter +
+												   _response.Last+ _parameters.OutputDelimiter +
+												   _response.LastSize+ _parameters.OutputDelimiter +
+												   _response.Bid+ _parameters.OutputDelimiter +
+												   _response.Ask+ _parameters.OutputDelimiter +
+												   _response.BidSize+ _parameters.OutputDelimiter +
+												   _response.AskSize+ _parameters.OutputDelimiter);
 							break;
 
 						//"HTT"
@@ -385,20 +374,18 @@ namespace IQFeedDownloader
 						//Ask Size. Integer. Example: 100
 						//Basis For Last. Character. Current Possible values are 'C' (normal trade) or 'E' (extended trade).
 						case "Tick Interval":
-							response.ParseMarketData(splittedData, true);
-							response.ParseDateTime(splittedData, DateFormat, TimeFormat);
+							_response.ParseTickMarketData(data);
+							_response.ParseDateTime(data);
 
-							writerToFile.WriteLine(
-								response.TickId + r.Delimiter +
-								response.TradeType + r.Delimiter +
-								response.FormattedDateTime(DateTimeSeparator) +
-								",{0},{1},{2},{3},{4},{5}",
-								response.Last,
-								response.LastSize,
-								response.Bid,
-								response.Ask,
-								response.BidSize,
-								response.AskSize);
+							writerToFile.WriteLine(_response.TickId + _parameters.OutputDelimiter +
+												   _response.TradeType + _parameters.OutputDelimiter +
+												   _response.ResponseDateTime + _parameters.OutputDelimiter +
+												   _response.Last + _parameters.OutputDelimiter +
+												   _response.LastSize + _parameters.OutputDelimiter +
+												   _response.Bid + _parameters.OutputDelimiter +
+												   _response.Ask + _parameters.OutputDelimiter +
+												   _response.BidSize + _parameters.OutputDelimiter +
+												   _response.AskSize + _parameters.OutputDelimiter);
 							break;
 
 						//"HID"
@@ -411,17 +398,15 @@ namespace IQFeedDownloader
 						//Total Volume.	Integer. Example: 1285001
 						//Period Volume. Integer. Example: 1285
 						case "Intraday Days":
-							response.ParseMarketData(splittedData, false);
-							response.ParseDateTime(splittedData, DateFormat, TimeFormat);
+							_response.ParseMarketData(data);
+							_response.ParseDateTime(data);
 
-							writerToFile.WriteLine(
-								response.FormattedDateTime(DateTimeSeparator) +
-								",{0},{1},{2},{3},{4}",
-								response.Open,
-								response.High,
-								response.Low,
-								response.Close,
-								response.Volume);
+							writerToFile.WriteLine(_response.ResponseDateTime + _parameters.OutputDelimiter +
+													_response.Open + _parameters.OutputDelimiter +
+													_response.High + _parameters.OutputDelimiter +
+													_response.Low + _parameters.OutputDelimiter +
+													_response.Close + _parameters.OutputDelimiter +
+													_response.Volume + _parameters.OutputDelimiter);
 							break;
 
 						//"HIT"
@@ -434,17 +419,15 @@ namespace IQFeedDownloader
 						//Total Volume.	Integer. Example: 1285001
 						//Period Volume. Integer. Example: 1285
 						case "Intraday Interval":
-							response.ParseMarketData(splittedData, false);
-							response.ParseDateTime(splittedData, DateFormat, TimeFormat);
+							_response.ParseMarketData(data);
+							_response.ParseDateTime(data);
 
-							writerToFile.WriteLine(
-								response.FormattedDateTime(DateTimeSeparator) +
-								",{0},{1},{2},{3},{4}",
-								response.Open,
-								response.High,
-								response.Low,
-								response.Close,
-								response.Volume);
+							writerToFile.WriteLine(_response.ResponseDateTime + _parameters.OutputDelimiter +
+															_response.Open + _parameters.OutputDelimiter +
+															_response.High + _parameters.OutputDelimiter +
+															_response.Low + _parameters.OutputDelimiter +
+															_response.Close + _parameters.OutputDelimiter +
+															_response.Volume + _parameters.OutputDelimiter);
 							break;
 
 						//"HDX"
@@ -457,18 +440,16 @@ namespace IQFeedDownloader
 						//Period Volume. Integer. Example: 1285001
 						//Open Interest. Integer. Example: 128
 						case "Daily Days":
-							response.ParseMarketData(splittedData, false);
-							response.ParseDateTime(splittedData, DateFormat, TimeFormat);
+							_response.ParseMarketData(data);
+							_response.ParseDateTime(data);
 
-							writerToFile.WriteLine(
-								response.FormattedDate +
-								",{0},{1},{2},{3},{4},{5}",
-								response.Open,
-								response.High,
-								response.Low,
-								response.Close,
-								response.Volume,
-								response.OpenInterest);
+							writerToFile.WriteLine(_response.ResponseDate + _parameters.OutputDelimiter +
+													_response.Open + _parameters.OutputDelimiter +
+													_response.High + _parameters.OutputDelimiter +
+													_response.Low + _parameters.OutputDelimiter +
+													_response.Close + _parameters.OutputDelimiter +
+													_response.Volume + _parameters.OutputDelimiter +
+													_response.OpenInterest + _parameters.OutputDelimiter);
 							break;
 
 						//"HDT"
@@ -481,18 +462,16 @@ namespace IQFeedDownloader
 						//Period Volume. Integer. Example: 1285001
 						//Open Interest. Integer. Example: 128
 						case "Daily Interval":
-							response.ParseMarketData(splittedData, false);
-							response.ParseDateTime(splittedData, DateFormat, TimeFormat);
+							_response.ParseMarketData(data);
+							_response.ParseDateTime(data);
 
-							writerToFile.WriteLine(
-								response.FormattedDate +
-								",{0},{1},{2},{3},{4},{5}",
-								response.Open,
-								response.High,
-								response.Low,
-								response.Close,
-								response.Volume,
-								response.OpenInterest);
+							writerToFile.WriteLine(_response.ResponseDate + _parameters.OutputDelimiter +
+													_response.Open + _parameters.OutputDelimiter +
+													_response.High + _parameters.OutputDelimiter +
+													_response.Low + _parameters.OutputDelimiter +
+													_response.Close + _parameters.OutputDelimiter +
+													_response.Volume + _parameters.OutputDelimiter +
+													_response.OpenInterest + _parameters.OutputDelimiter);
 							break;
 
 						//"HWX"
@@ -505,18 +484,16 @@ namespace IQFeedDownloader
 						//Period Volume. Integer. Example: 1285001
 						//Open Interest. Integer. Example: 128
 						case "Weekly Days":
-							response.ParseMarketData(splittedData, false);
-							response.ParseDateTime(splittedData, DateFormat, TimeFormat);
+							_response.ParseMarketData(data);
+							_response.ParseDateTime(data);
 
-							writerToFile.WriteLine(
-								response.FormattedDate +
-								",{0},{1},{2},{3},{4},{5}",
-								response.Open,
-								response.High,
-								response.Low,
-								response.Close,
-								response.Volume,
-								response.OpenInterest);
+							writerToFile.WriteLine(_response.ResponseDate + _parameters.OutputDelimiter +
+													_response.Open + _parameters.OutputDelimiter +
+													_response.High + _parameters.OutputDelimiter +
+													_response.Low + _parameters.OutputDelimiter +
+													_response.Close + _parameters.OutputDelimiter +
+													_response.Volume + _parameters.OutputDelimiter +
+													_response.OpenInterest + _parameters.OutputDelimiter);
 							break;
 
 						//"HMX"
@@ -529,18 +506,16 @@ namespace IQFeedDownloader
 						//Period Volume. Integer. Example: 1285001
 						//Open Interest. Integer. Example: 128
 						case "Monthly Days":
-							response.ParseMarketData(splittedData, false);
-							response.ParseDateTime(splittedData, DateFormat, TimeFormat);
+							_response.ParseMarketData(data);
+							_response.ParseDateTime(data);
 
-							writerToFile.WriteLine(
-								response.FormattedDate +
-								",{0},{1},{2},{3},{4},{5}",
-								response.Open,
-								response.High,
-								response.Low,
-								response.Close,
-								response.Volume,
-								response.OpenInterest);
+							writerToFile.WriteLine(_response.ResponseDate + _parameters.OutputDelimiter +
+													_response.Open + _parameters.OutputDelimiter +
+													_response.High + _parameters.OutputDelimiter +
+													_response.Low + _parameters.OutputDelimiter +
+													_response.Close + _parameters.OutputDelimiter +
+													_response.Volume + _parameters.OutputDelimiter +
+													_response.OpenInterest + _parameters.OutputDelimiter);
 							break;
 					}
 				}

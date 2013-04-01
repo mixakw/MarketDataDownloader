@@ -5,7 +5,8 @@ namespace IQFeedDownloader
 {
 	public class Request
 	{
-		#region Public Variables
+		public string Delimiter = ",";
+		public string Terminater = Environment.NewLine;
 
 		public string TickDaysHeader = "HTD";
 		public string TickIntervalHeader = "HTT";
@@ -16,123 +17,36 @@ namespace IQFeedDownloader
 		public string WeeklyDaysHeader = "HWX";
 		public string MonthlyDaysHeader = "HMX";
 
-		public string Delimiter = ",";
-		public string TerminatingCharacter = Environment.NewLine;
-
-		#endregion Public Variables
-
-		#region Private Variables
-
-		private List<string> _symbols;
-		private string _currentSymbol;
-		private string _days;
-		private string _maxDatapoints = "0";
-		private string _dataDirection = "1";
-		private string _requestID;
-		private string _datapointsPerSend = "2500";
 		private int _interval;
-
-		private string _beginFilterTime = "000000";
-		private string _endFilterTime = "235959";
-
-		private string _beginDate;
-		private string _endDate;
-		private string _beginTime = "000000";
-		private string _endTime = "000000";
-
 		private string _timeFrameName;
 		private string _timeFrameType;
 
-		#endregion Private Variables
-
-		#region Constructor
-
 		public Request()
 		{
-			_symbols = new List<string>();
+			MaxDatapoints = "0";
+			BeginFilterTime = "000000";
+			EndFilterTime = "235959";
+			DataDirection = "1";
+			DatapointsPerSend = "2500";
+			BeginTime = "000000";
+			EndTime = "000000";
+
+			Symbols = new List<string>();
 		}
 
-		#endregion Constructor
-
-		#region Public Properties
-
-		public List<string> Symbols
-		{
-			get { return _symbols; }
-			set { _symbols = value; }
-		}
-
-		public string CurrentSymbol
-		{
-			get { return _currentSymbol; }
-			set { _currentSymbol = value; }
-		}
-
-		public string Days
-		{
-			get { return _days; }
-			set { _days = value; }
-		}
-
-		public string MaxDatapoints
-		{
-			get { return _maxDatapoints; }
-			set { _maxDatapoints = value; }
-		}
-
-		public string BeginFilterTime
-		{
-			get { return _beginFilterTime; }
-			set { _beginFilterTime = value; }
-		}
-
-		public string EndFilterTime
-		{
-			get { return _endFilterTime; }
-			set { _endFilterTime = value; }
-		}
-
-		public string DataDirection
-		{
-			get { return _dataDirection; }
-			set { _dataDirection = value; }
-		}
-
-		public string RequestID
-		{
-			get { return _requestID; }
-			set { _requestID = value; }
-		}
-
-		public string DatapointsPerSend
-		{
-			get { return _datapointsPerSend; }
-			set { _datapointsPerSend = value; }
-		}
-
-		public string BeginTime
-		{
-			get { return _beginTime; }
-			set { _beginTime = value; }
-		}
-
-		public string EndTime
-		{
-			get { return _endTime; }
-			set { _endTime = value; }
-		}
-
-		public string BeginDate
-		{
-			get { return _beginDate; }
-			set { _beginDate = value; }
-		}
-
-		public string EndDate
-		{
-			get { return _endDate; }
-			set { _endDate = value; }
-		}
+		public List<string> Symbols { get; set; }
+		public string CurrentSymbol { get; set; }
+		public string Days { get; set; }
+		public string MaxDatapoints { get; set; }
+		public string BeginFilterTime { get; set; }
+		public string EndFilterTime { get; set; }
+		public string DataDirection { get; set; }
+		public string RequestID { get; set; }
+		public string DatapointsPerSend { get; set; }
+		public string BeginTime { get; set; }
+		public string EndTime { get; set; }
+		public string BeginDate { get; set; }
+		public string EndDate { get; set; }
 
 		public string TimeFrame
 		{
@@ -164,7 +78,5 @@ namespace IQFeedDownloader
 			get { return _interval * 60; }
 			set { _interval = value; }
 		}
-
-		#endregion Public Properties
 	}
 }

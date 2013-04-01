@@ -4,171 +4,38 @@ namespace IQFeedDownloader
 {
 	internal sealed class Response
 	{
-		#region Private Variables
+		private Parameters _parameters;
 
-		private string _requestId;
+		public string RequestId { get; set; }
+		public string High { get; set; }
+		public string Low { get; set; }
+		public string Open { get; set; }
+		public string Close { get; set; }
+		public string Volume { get; set; }
+		public string OpenInterest { get; set; }
+		public string Last { get; set; }
+		public string LastSize { get; set; }
+		public string TotalVolume { get; set; }
+		public string Bid { get; set; }
+		public string Ask { get; set; }
+		public string TickId { get; set; }
+		public string BidSize { get; set; }
+		public string AskSize { get; set; }
+		public string TradeType { get; set; }
 
-		private string _high;
-		private string _low;
-		private string _open;
-		private string _close;
-		private string _volume;
+		public string ResponseDate { get; set; }
+		public string ResponseTime { get; set; }
+		public string ResponseDateTime { get; set; }
 
-		private string _openInterest;
-		private string _last;
-		private string _lastSize;
-		private string _totalVolume;
-		private string _bid;
-		private string _ask;
-		private string _tickId;
-		private string _bidSize;
-		private string _askSize;
-		private string _tradeType;
-
-		private string _formattedDate;
-		private string _formattedTime;
-
-		private string _dateFormat;
-		private string _timeFormat;
-		private string _dateTimeDelimeter;
-
-		#endregion Private Variables
-
-		#region Public Properties
-
-		public string RequestId
+		public Response()
 		{
-			get { return _requestId; }
-			set { _requestId = value; }
+			_parameters = new Parameters();
 		}
-
-		public string High
-		{
-			get { return _high; }
-			set { _high = value; }
-		}
-
-		public string Low
-		{
-			get { return _low; }
-			set { _low = value; }
-		}
-
-		public string Open
-		{
-			get { return _open; }
-			set { _open = value; }
-		}
-
-		public string Close
-		{
-			get { return _close; }
-			set { _close = value; }
-		}
-
-		public string Volume
-		{
-			get { return _volume; }
-			set { _volume = value; }
-		}
-
-		public string OpenInterest
-		{
-			get { return _openInterest; }
-			set { _openInterest = value; }
-		}
-
-		public string Last
-		{
-			get { return _last; }
-			set { _last = value; }
-		}
-
-		public string LastSize
-		{
-			get { return _lastSize; }
-			set { _lastSize = value; }
-		}
-
-		public string TotalVolume
-		{
-			get { return _totalVolume; }
-			set { _totalVolume = value; }
-		}
-
-		public string Bid
-		{
-			get { return _bid; }
-			set { _bid = value; }
-		}
-
-		public string Ask
-		{
-			get { return _ask; }
-			set { _ask = value; }
-		}
-
-		public string TickId
-		{
-			get { return _tickId; }
-			set { _tickId = value; }
-		}
-
-		public string BidSize
-		{
-			get { return _bidSize; }
-			set { _bidSize = value; }
-		}
-
-		public string AskSize
-		{
-			get { return _askSize; }
-			set { _askSize = value; }
-		}
-
-		public string TradeType
-		{
-			get { return _tradeType; }
-			set { _tradeType = value; }
-		}
-
-		public string FormattedDate
-		{
-			get { return _formattedDate; }
-			set { _formattedDate = value; }
-		}
-
-		public string FormattedTime
-		{
-			get { return _formattedTime; }
-			set { _formattedTime = value; }
-		}
-
-		public string DateFormat
-		{
-			get { return _dateFormat; }
-			set { _dateFormat = value; }
-		}
-
-		public string TimeFormat
-		{
-			get { return _timeFormat; }
-			set { _timeFormat = value; }
-		}
-
-		public string DateTimeDelimeter
-		{
-			get { return _dateTimeDelimeter; }
-			set { _dateTimeDelimeter = value; }
-		}
-
-		#endregion Public Properties
-
-		#region Public Methods
 
 		public void ParseTickMarketData(string[] input)
 		{
 			if (input == null) throw new ArgumentNullException("input");
+			if (input.Length != 10) throw new ArgumentException("input");
 
 			RequestId = input[0];
 			Last = input[2];
@@ -185,6 +52,7 @@ namespace IQFeedDownloader
 		public void ParseMarketData(string[] input)
 		{
 			if (input == null) throw new ArgumentNullException("input");
+			if (input.Length != 7) throw new ArgumentException("input");
 
 			RequestId = input[0];
 			High = input[2];
@@ -199,31 +67,22 @@ namespace IQFeedDownloader
 		{
 			if (input == null) throw new ArgumentNullException("input");
 
-			FormattedDate = ParseDate(input[1]);
-			FormattedTime = ParseTime(input[1]);
+			string date = ParseDate(input[1]);
+			string time = ParseTime(input[1]);
+
+			ResponseDateTime = date + _parameters.DateTimeDelimeter + time;
 		}
-
-		public string FormattedDateTime()
-		{
-			return FormattedDate + DateTimeDelimeter + FormattedTime;
-		}
-
-		#endregion Public Methods
-
-		#region Private Methods
 
 		private string ParseTime(string input)
 		{
-			var result = DateTime.Parse(input.Substring(11, 5));
-			return result.ToString(TimeFormat);
+			string time = input.Substring(11, 5);
+			return time.ToString();//_parameters.TimeFormat);
 		}
 
 		private string ParseDate(string input)
 		{
-			var yearMonthDay = DateTime.Parse(input.Substring(0, 4) + input.Substring(5, 2) + input.Substring(8, 2));
-			return yearMonthDay.ToString(DateFormat);
+			string date = input.Substring(0, 4) + input.Substring(5, 2) + input.Substring(8, 2);
+			return date.ToString();//_parameters.DateFormat);
 		}
-
-		#endregion Private Methods
 	}
 }

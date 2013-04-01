@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Globalization;
-using System.Linq;
-using System.Net.Sockets;
 using System.Windows.Forms;
-using System.Collections.Generic;
+
 using IQFeedDownloader.Logger;
+using IQFeedDownloader.Properties;
+
 using log4net;
 using log4net.Config;
 using System.ComponentModel;
@@ -22,6 +22,7 @@ namespace IQFeedDownloader
 
 		private Request _request;
 		private Response _response;
+		private Parameters _parameters;
 
 		#endregion Variables
 
@@ -109,12 +110,12 @@ namespace IQFeedDownloader
 
 		private void SetDefaultValues()
 		{
-			rtbSymbols.Text = "@NQ#\n@ES#\n@EU#";
-			tbFolder.Text = @"c:\IQFeed\";
+			rtbSymbols.Text = Resources.MainForm_DefaultSymbols;
+			tbFolder.Text = Resources.MainForm_DefaultPath;
 
 			rbInterval.Enabled = true;
 			rbDays.Enabled = true;
-			tbAmountOfDays.Text = "7300";
+			tbAmountOfDays.Text = Resources.MainForm_DefaultAmountOfDays;
 			rbDays.Checked = true;
 
 			cbTimeframe.Enabled = true;
@@ -172,7 +173,7 @@ namespace IQFeedDownloader
 
 		private void LoadParameters()
 		{
-			_response = new Response { DateFormat = cbDate.Text, TimeFormat = cbTime.Text, DateTimeDelimeter = cbDateTimeSeparator.Text };
+			_parameters = new Parameters { DateFormat = cbDate.Text, TimeFormat = cbTime.Text, DateTimeDelimeter = cbDateTimeSeparator.Text };
 
 			_request = new Request
 						   {
