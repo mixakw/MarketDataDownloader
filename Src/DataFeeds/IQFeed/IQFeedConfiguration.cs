@@ -1,4 +1,18 @@
-﻿using System;
+﻿#region FileHeader
+
+// File:
+// MarketDataDownloader/IQFeed/IQFeedConfiguration.cs
+// 
+// Last updated:
+// 2013-05-22 7:02 PM
+
+#endregion
+
+#region Usings
+
+using System;
+
+#endregion
 
 namespace IQFeed
 {

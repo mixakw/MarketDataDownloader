@@ -4,14 +4,13 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{D90E3225-1A6C-4164-9669-A6BFB4B7F6B5}</ProjectGuid>
+    <ProjectGuid>{CB1ADEF1-C238-482F-B2AC-CFC9C5558D03}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>IQFeed</RootNamespace>
-    <AssemblyName>IQFeed</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <RootNamespace>MarketDataDownloader.Logging</RootNamespace>
+    <AssemblyName>MarketDataDownloader.Logging</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -21,7 +20,6 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -30,40 +28,30 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="log4net, Version=1.2.11.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+    <Reference Include="log4net">
+      <HintPath>..\MarketDataDownloader\bin\Debug\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\MarketDataDownloader\bin\Debug\log4net.dll</HintPath>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="IQFeedConfiguration.cs" />
-    <Compile Include="Core\IQFeedCore.cs" />
-    <Compile Include="Core\IQFeedDataSaver.cs" />
-    <Compile Include="Core\IQFeedProxy.cs" />
-    <Compile Include="Core\IQFeedQueryBuilder.cs" />
-    <Compile Include="Models\IQFeedRequest.cs" />
-    <Compile Include="Models\IQFeedResponse.cs" />
+    <Compile Include="IMyLogger.cs" />
+    <Compile Include="MyLogger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Helpers\IQFeedResponseHelper.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\MarketDataDownloader.DomainLogicLayer\MarketDataDownloader.DomainLogicLayer.csproj">
-      <Project>{6e1f6270-7bff-4fc2-b22c-16f8ff0ae970}</Project>
-      <Name>MarketDataDownloader.DomainLogicLayer</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\MarketDataDownloader.Logging\MarketDataDownloader.Logging.csproj">
-      <Project>{cb1adef1-c238-482f-b2ac-cfc9c5558d03}</Project>
-      <Name>MarketDataDownloader.Logging</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+    <Compile Include="RichTextBoxAppender.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

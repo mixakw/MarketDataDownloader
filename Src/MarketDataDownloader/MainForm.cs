@@ -1,111 +1,277 @@
-﻿using System;
-using System.Globalization;
+﻿// =================================================
+// File:
+// MarketDataDownloader/MarketDataDownloader.UI/MainForm.cs
+// 
+// Last updated:
+// 2013-05-24 3:58 PM
+// =================================================
+
+#region Usings
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
-using MarketDataDownloader.Logger;
-using MarketDataDownloader.Properties;
+using IQFeed.Core;
+using IQFeed.Models;
 
-using log4net;
-using log4net.Config;
-using System.ComponentModel;
+using MarketDataDownloader.DI;
+using MarketDataDownloader.DomainLogicLayer.Abstraction;
+using MarketDataDownloader.DomainLogicLayer.Helpers;
+using MarketDataDownloader.DomainLogicLayer.Models;
+using MarketDataDownloader.Logging;
+using MarketDataDownloader.UI.Properties;
 
-namespace MarketDataDownloader
+using Microsoft.Practices.Unity;
+
+#endregion
+
+namespace MarketDataDownloader.UI
 {
 	public partial class MainForm : Form
 	{
-		#region Variables
+		private TcpClient _client;
+		private IQFeedCore _core;
 
-		private static ILog _logger;
-		private BackgroundWorker _backWorker;
-
-		private Helper _helper;
-
-		private Request _request;
-		private Response _response;
-		private Parameters _parameters;
-
-		#endregion Variables
-
-		#region Constructor
+		private CancellationTokenSource _cts;
+		private MyLogger _logger;
+		private NetworkStream _network;
+		private IProgress<KeyValuePair<string, string>> _progress;
+		private IQFeedProxy _proxy;
+		private IQFeedQueryBuilder _queryBuilder;
 
 		public MainForm()
 		{
 			InitializeComponent();
 
-			InitLogger();
-
+			InitVariables();
 			ConnectToDataFeed();
-
 			SetDefaultValues();
-
-			LoadParameters();
-
-			InitBackgroudWorker();
+			InitAsyncRelated();
 		}
 
-		#endregion Constructor
-
-		#region BackgroundWorker
-
-		public BackgroundWorker Worker
+		private void InitVariables()
 		{
-			get { return _backWorker; }
+			DependencyFactory.Container.RegisterInstance(new RichTextBoxAppender(rtbLog));
+
+			_logger =
+				(MyLogger)DependencyFactory.Container.Resolve<IMyLogger>(new ParameterOverride("currentClassName", "MarketDataDownloader.UI.MainForm"));
+
+			_core = (IQFeedCore)DependencyFactory.Container.Resolve<IDataFeedCore>();
+			_proxy = (IQFeedProxy)DependencyFactory.Container.Resolve<IDataFeedProxy>();
+			_queryBuilder = (IQFeedQueryBuilder)DependencyFactory.Container.Resolve<IDataFeedQueryBuilder>();
 		}
 
-		private void InitBackgroudWorker()
+		private Parameters LoadProgramParameters()
 		{
-			_backWorker = new BackgroundWorker();
+			var parameters = new Parameters();
 
-			_backWorker.DoWork += BWorkerDoWork;
-			_backWorker.RunWorkerCompleted += BWorkerRunWorkerCompleted;
-			_backWorker.WorkerSupportsCancellation = true;
+			parameters.DateFormat = cbDate.Text;
+			parameters.DateTimeDelimeter = cbDateTimeSeparator.Text;
+			parameters.TimeFormat = cbTime.Text;
+			parameters.OutputDelimiter = "";
+
+			return parameters;
 		}
 
-		private void BWorkerDoWork(object sender, DoWorkEventArgs e)
+		private IRequest LoadRequestParameters()
 		{
-			var worker = sender as BackgroundWorker;
-			if (worker == null)
-				return;
+			IRequest request = new IQFeedRequest();
 
-			foreach (var symbol in _request.Symbols)
+			request.Symbols = GetTickersList();
+			request.CurrentSymbol = String.Empty;
+
+			if (rbDays.Checked)
 			{
-				if (worker.CancellationPending)
-				{
-					e.Cancel = true;
-					return;
-				}
-
-				_logger.Info(String.Format("Symbol {0}", symbol));
-				string query = _helper.CreateQuery(_request);
-				_helper.GetData(query, tbFolder.Text, _request);
+				request.TimeFrameType = "Days";
 			}
 
-			_logger.Warn("Finished");
+			if (rbInterval.Checked)
+			{
+				request.TimeFrameType = "Interval";
+			}
+
+			request.TimeFrameName = cbTimeframe.SelectedItem.ToString();
+
+			request.BeginDate = dtpBeginDate.Value.ToLongDateString();
+			request.EndDate = dtpEndDate.Value.ToLongDateString();
+			request.BeginTime = dtpBeginTime.Value.ToLongTimeString();
+			request.EndTime = dtpEndTime.Value.ToLongTimeString();
+
+			request.Days = tbAmountOfDays.Text;
+
+			int interval;
+			Int32.TryParse(cbTimeframeIntraday.SelectedItem.ToString(), out interval);
+			request.Interval = interval;
+
+			request.BeginFilterTime = "";
+			request.EndFilterTime = "";
+
+			
+
+			request.DataDirection = "";
+			request.DatapointsPerSend = "";
+			request.MaxDatapoints = "";
+			request.RequestID = "";
+
+			return request;
 		}
 
-		private void BWorkerRunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+		private async void BtnStartClick(object sender, EventArgs e)
 		{
-			if ((e.Cancelled))
+			LoadRequestParameters();
+			LockControls();
+
+			if (CheckSavePath() && CheckConnection())
 			{
-				_logger.Error("Operation was canceled");
-			}
-			else if (e.Error != null)
-			{
-				_logger.Error(String.Format("An error occurred: {0}", e.Error.Message));
+				var programParameters = LoadProgramParameters();
+				var requestParameters = LoadRequestParameters();
+
+				var result = await DownloadDataAsync(programParameters, requestParameters);
+				_progress.Report(new KeyValuePair<string, string>("INFO", result));
 			}
 
 			UnlockControls();
+
+			_logger.Info("Done");
 		}
 
-		#endregion
+		private void InitAsyncRelated()
+		{
+			_cts = new CancellationTokenSource();
+			_progress = new Progress<KeyValuePair<string, string>>(ReportProgress);
+		}
+
+		private async Task<string> DownloadDataAsync(Parameters programParameters, IRequest requestParameters)
+		{
+			await Task.Factory.StartNew(() =>
+			{
+				while (chbRealtime.Checked && !_cts.IsCancellationRequested)
+				{
+					foreach (var symbol in requestParameters.Symbols)
+					{
+						requestParameters.CurrentSymbol = symbol;
+
+						if (_cts.IsCancellationRequested)
+						{
+							_progress.Report(new KeyValuePair<string, string>("INFO", "Stopping proccess..."));
+						}
+						else
+						{
+							_progress.Report(new KeyValuePair<string, string>("INFO", String.Format("Symbol {0}", requestParameters.CurrentSymbol)));
+							UploadAndProcess(programParameters, requestParameters);
+						}
+
+						_cts.Token.ThrowIfCancellationRequested();
+					}
+				}
+			});
+
+			return "Done";
+		}
+
+		public void UploadAndProcess(Parameters programParameters, IRequest requestParameters)
+		{
+			var query = _queryBuilder.CreateQuery(requestParameters);
+			_core.GetData(query, tbFolder.Text, (IQFeedRequest)requestParameters, _network);
+		}
+
+		private void ReportProgress(KeyValuePair<string, string> type)
+		{
+			switch (type.Key)
+			{
+				case "INFO":
+					_logger.Info(type.Value);
+					break;
+				case "WARN":
+					_logger.Warn(type.Value);
+					break;
+				case "ERROR":
+					_logger.Error(type.Value);
+					break;
+				default:
+					_logger.Debug(type.Value);
+					break;
+			}
+		}
+
+		#region Controls
+
+		private void BtnChooseStoreFolderClick(object sender, EventArgs e)
+		{
+			var dialog = new FolderBrowserDialog();
+			dialog.ShowDialog();
+			tbFolder.Text = dialog.SelectedPath;
+		}
+
+		private void BtnReconnectClick(object sender, EventArgs e)
+		{
+			ConnectToDataFeed();
+		}
+
+		private void RbDaysCheckedChanged(object sender, EventArgs e)
+		{
+			dtpBeginDate.Enabled = false;
+			dtpEndDate.Enabled = false;
+			dtpBeginTime.Enabled = false;
+			dtpEndTime.Enabled = false;
+			tbAmountOfDays.Enabled = true;
+		}
+
+		private void RbIntervalCheckedChanged(object sender, EventArgs e)
+		{
+			dtpBeginDate.Enabled = true;
+			dtpEndDate.Enabled = true;
+			dtpBeginTime.Enabled = true;
+			dtpEndTime.Enabled = true;
+			tbAmountOfDays.Enabled = false;
+		}
+
+		private void BtnStopClick(object sender, EventArgs e)
+		{
+			_cts.Cancel();
+		}
+
+		#endregion Controls
 
 		#region Private Methods
 
-		private void InitLogger()
+		private void LockControls()
 		{
-			_logger = LogManager.GetLogger(typeof(MainForm));
-			XmlConfigurator.Configure();
-			RichTextBoxAppender.SetRichTextBox(rtbLog);
+			btnChooseStoreFolder.Enabled = false;
+			rbDays.Enabled = false;
+			rbInterval.Enabled = false;
+			cbTimeframe.Enabled = false;
+			btnReconnect.Enabled = false;
+			btnStart.Enabled = false;
+			rbMainSession.Enabled = false;
+			rbCustomInt.Enabled = false;
+
+			dtpBeginDate.Enabled = false;
+			dtpEndDate.Enabled = false;
+			dtpBeginTime.Enabled = false;
+			dtpEndTime.Enabled = false;
+		}
+
+		private void UnlockControls()
+		{
+			btnChooseStoreFolder.Enabled = true;
+			rbDays.Enabled = true;
+			rbInterval.Enabled = true;
+			cbTimeframe.Enabled = true;
+			btnReconnect.Enabled = true;
+			btnStart.Enabled = true;
+			rbMainSession.Enabled = true;
+			rbCustomInt.Enabled = true;
+
+			dtpBeginDate.Enabled = true;
+			dtpEndDate.Enabled = true;
+			dtpBeginTime.Enabled = true;
+			dtpEndTime.Enabled = true;
 		}
 
 		private void SetDefaultValues()
@@ -125,99 +291,44 @@ namespace MarketDataDownloader
 
 			dtpBeginDate.Enabled = false;
 			dtpEndDate.Enabled = false;
+			dtpBeginTime.Enabled = false;
+			dtpEndTime.Enabled = false;
 
-			dtpBeginDate.Value = Convert.ToDateTime(@"1/1/2005 12:00:00 AM");
+			rbMainSession.Checked = false;
+			rbCustomInt.Checked = false;
+			rbAlldata.Checked = true;
+
+			dtpCustomIntBegin.Enabled = false;
+			dtpCustomIntEnd.Enabled = false;
+
+			dtpBeginDate.Value = Convert.ToDateTime(@"01-01-2005");
 			dtpEndDate.Value = DateTime.Today;
+
+			dtpBeginTime.Value = Convert.ToDateTime(@"00:00:00");
+			dtpEndTime.Value = Convert.ToDateTime(@"23:59:59");
 
 			cbDate.SelectedIndex = 0;
 			cbTime.SelectedIndex = 0;
 			cbDateTimeSeparator.SelectedIndex = 0;
 		}
 
-		private bool CheckSavePath()
+		private void rbCustomInt_CheckedChanged(object sender, EventArgs e)
 		{
-			bool isValid = true;
-
-			PathHelper path = new PathHelper();
-
-			if (!path.CreateDirectory(tbFolder.Text))
-			{
-				_logger.Error("Wrong directory name");
-				isValid = false;
-			}
-
-			return isValid;
+			dtpCustomIntBegin.Enabled = true;
+			dtpCustomIntEnd.Enabled = true;
 		}
 
-		private void LockControls()
+		private void rbMainSession_CheckedChanged_1(object sender, EventArgs e)
 		{
-			btnChooseStoreFolder.Enabled = false;
-			rbDays.Enabled = false;
-			rbInterval.Enabled = false;
-			cbTimeframe.Enabled = false;
-			btnReconnect.Enabled = false;
-			btnStart.Enabled = false;
-			chbMainSession.Enabled = false;
+			dtpCustomIntBegin.Enabled = false;
+			dtpCustomIntEnd.Enabled = false;
 		}
 
-		private void UnlockControls()
+		private void rbAlldata_CheckedChanged(object sender, EventArgs e)
 		{
-			btnChooseStoreFolder.Enabled = true;
-			rbDays.Enabled = true;
-			rbInterval.Enabled = true;
-			cbTimeframe.Enabled = true;
-			btnReconnect.Enabled = true;
-			btnStart.Enabled = true;
-			chbMainSession.Enabled = true;
+			dtpCustomIntBegin.Enabled = false;
+			dtpCustomIntEnd.Enabled = false;
 		}
-
-		private void LoadParameters()
-		{
-			_parameters = new Parameters { DateFormat = cbDate.Text, TimeFormat = cbTime.Text, DateTimeDelimeter = cbDateTimeSeparator.Text };
-
-			_request = new Request
-						   {
-							   TimeFrameName = cbTimeframe.SelectedItem.ToString(),
-							   Interval = Int32.Parse(cbTimeframeIntraday.SelectedItem.ToString()),
-							   Days = tbAmountOfDays.Text
-						   };
-
-			if (rbDays.Checked)
-				_request.TimeFrameType = "Days";
-
-			if (rbInterval.Checked)
-				_request.TimeFrameType = "Interval";
-
-			_request.BeginDate = dtpBeginDate.Value.ToString(CultureInfo.InvariantCulture);
-			_request.EndDate = dtpEndDate.Value.ToString(CultureInfo.InvariantCulture);
-
-			_request.Symbols.AddRange(rtbSymbols.Text.Split('\n'));
-		}
-
-		private void ConnectToDataFeed()
-		{
-			if (_helper == null)
-				_helper = new Helper();
-
-			_helper.OpenConnection();
-
-			if (_helper.Socket == null)
-			{
-				statusStrip1.Items[0].Visible = false;
-				statusStrip1.Items[1].Visible = true;
-				_logger.Error("Can't connect to the datafeed. Check IQLink connection");
-			}
-			else
-			{
-				statusStrip1.Items[0].Visible = true;
-				statusStrip1.Items[1].Visible = false;
-				_logger.Warn("Connection established");
-			}
-		}
-
-		#endregion
-
-		#region Form Controls Events
 
 		private void CbTimeframeSelectedIndexChanged(object sender, EventArgs e)
 		{
@@ -228,8 +339,10 @@ namespace MarketDataDownloader
 					rbDays.Enabled = true;
 					tbAmountOfDays.Enabled = true;
 					rbInterval.Enabled = true;
-					chbMainSession.Checked = false;
-					chbMainSession.Enabled = true;
+
+					rbMainSession.Enabled = true;
+					rbCustomInt.Enabled = true;
+					rbAlldata.Enabled = true;
 					break;
 
 				case "Intraday":
@@ -237,8 +350,10 @@ namespace MarketDataDownloader
 					rbDays.Enabled = true;
 					tbAmountOfDays.Enabled = true;
 					rbInterval.Enabled = true;
-					chbMainSession.Checked = false;
-					chbMainSession.Enabled = true;
+					
+					rbMainSession.Enabled = true;
+					rbCustomInt.Enabled = true;
+					rbAlldata.Enabled = true;
 					break;
 
 				case "Daily":
@@ -246,8 +361,12 @@ namespace MarketDataDownloader
 					rbDays.Enabled = false;
 					tbAmountOfDays.Enabled = false;
 					rbInterval.Enabled = false;
-					chbMainSession.Checked = false;
-					chbMainSession.Enabled = false;
+
+					rbMainSession.Enabled = false;
+					rbCustomInt.Enabled = false;
+					rbAlldata.Enabled = false;
+					dtpCustomIntBegin.Enabled = false;
+					dtpCustomIntEnd.Enabled = false;
 					break;
 
 				case "Weekly":
@@ -255,8 +374,12 @@ namespace MarketDataDownloader
 					rbDays.Enabled = false;
 					tbAmountOfDays.Enabled = false;
 					rbInterval.Enabled = false;
-					chbMainSession.Checked = false;
-					chbMainSession.Enabled = false;
+					
+					rbMainSession.Enabled = false;
+					rbCustomInt.Enabled = false;
+					rbAlldata.Enabled = false;
+					dtpCustomIntBegin.Enabled = false;
+					dtpCustomIntEnd.Enabled = false;
 					break;
 
 				case "Monthly":
@@ -264,80 +387,73 @@ namespace MarketDataDownloader
 					rbDays.Enabled = false;
 					tbAmountOfDays.Enabled = false;
 					rbInterval.Enabled = false;
-					chbMainSession.Checked = false;
-					chbMainSession.Enabled = false;
+					
+					rbMainSession.Enabled = false;
+					rbCustomInt.Enabled = false;
+					rbAlldata.Enabled = false;
+					dtpCustomIntBegin.Enabled = false;
+					dtpCustomIntEnd.Enabled = false;
 					break;
 			}
 		}
 
-		private void RbDaysCheckedChanged(object sender, EventArgs e)
+		private bool CheckSavePath()
 		{
-			dtpBeginDate.Enabled = false;
-			dtpEndDate.Enabled = false;
-			tbAmountOfDays.Enabled = true;
-		}
+			var isValid = true;
+			var path = new PathHelper();
 
-		private void RbIntervalCheckedChanged(object sender, EventArgs e)
-		{
-			dtpBeginDate.Enabled = true;
-			dtpEndDate.Enabled = true;
-			tbAmountOfDays.Enabled = false;
-		}
-
-		#endregion Form Controls Events
-
-		#region Buttons Events
-
-		private void BtnChooseStoreFolderClick(object sender, EventArgs e)
-		{
-			var dialog = new FolderBrowserDialog();
-			dialog.ShowDialog();
-			tbFolder.Text = dialog.SelectedPath;
-		}
-
-		private void BtnStopClick(object sender, EventArgs e)
-		{
-			_logger.Warn("Process will stop at the next symbol...");
-
-			if (_backWorker.WorkerSupportsCancellation)
+			if (!path.CreateDirectory(tbFolder.Text))
 			{
-				_backWorker.CancelAsync();
+				_logger.Error("Wrong directory name");
+				isValid = false;
+			}
+
+			return isValid;
+		}
+
+		private List<string> GetTickersList()
+		{
+			return rtbSymbols.Text.Split('\n').ToList();
+		}
+
+		#region Connection
+
+		private void ConnectToDataFeed()
+		{
+			_client = _proxy.Connect();
+
+			if (CheckConnection())
+			{
+				_network = _proxy.CreateNetworkStream(_client);
 			}
 		}
 
-		private void BtnStartClick(object sender, EventArgs e)
+		private bool CheckConnection()
 		{
-			LockControls();
-			LoadParameters();
+			var isConnected = true;
 
-			bool correctPath = CheckSavePath();
-
-			if (correctPath)
+			if (_client == null || _client.Connected == false)
 			{
-				if (_backWorker.IsBusy)
-				{
-					_logger.Info("Previous process is running");
-				}
-				else
-				{
-					if (_helper.Socket == null || _helper.Socket.Connected == false)
-					{
-						_logger.Info("Check datafeed connection");
-					}
-					else
-					{
-						_logger.Info("Starting processing");
-						_backWorker.RunWorkerAsync();
-					}
-				}
+				isConnected = false;
+
+				statusStrip1.Items[0].Visible = false;
+				statusStrip1.Items[1].Visible = true;
+
+				_logger.Error("Can't connect to the data feed. Check IQLink connection");
 			}
+			else
+			{
+				statusStrip1.Items[0].Visible = true;
+				statusStrip1.Items[1].Visible = false;
+
+				_logger.Warn("Connection established");
+			}
+
+			return isConnected;
 		}
 
-		private void BtnReconnectClick(object sender, EventArgs e)
-		{
-			ConnectToDataFeed();
-		}
+		#endregion Connection
 
-		#endregion Buttons Events
+		#endregion Private Methods
 	}
 }

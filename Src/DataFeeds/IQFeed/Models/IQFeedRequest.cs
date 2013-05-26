@@ -3,7 +3,7 @@ using MarketDataDownloader.DomainLogicLayer.Abstraction;
 
 namespace IQFeed.Models
 {
-	public class IQFeedRequest : BaseRequest
+	public class IQFeedRequest : IRequest
 	{
 		public List<string> Symbols { get; set; }
 
@@ -20,15 +20,15 @@ namespace IQFeed.Models
 		public string BeginDate { get; set; }
 		public string EndDate { get; set; }
 
-		public string TimeFrame
-		{
-			get { return _timeFrameName + " " + _timeFrameType; }
-		}
-
 		private string _timeFrameName;
 		public string TimeFrameName
 		{
 			set { _timeFrameName = value; }
+		}
+
+		public string TimeFrame
+		{
+			get { return _timeFrameName + " " + _timeFrameType; }
 		}
 
 		private string _timeFrameType;
@@ -48,6 +48,8 @@ namespace IQFeed.Models
 		}
 
 		private int _interval;
+		
+
 		public int Interval
 		{
 			get { return _interval * 60; }
@@ -63,7 +65,6 @@ namespace IQFeed.Models
 			DatapointsPerSend = "2500";
 			BeginTime = "000000";
 			EndTime = "000000";
-
 			Symbols = new List<string>();
 		}
 	}

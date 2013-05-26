@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>MarketDataDownloader.DomainLogicLayer</RootNamespace>
     <AssemblyName>MarketDataDownloader.DomainLogicLayer</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -29,6 +30,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net">
@@ -44,9 +46,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Logger\RichTextBoxAppender.cs" />
-    <Compile Include="Abstraction\BaseRequest.cs" />
-    <Compile Include="Abstraction\BaseResponse.cs" />
+    <Compile Include="Abstraction\IResponse.cs" />
+    <Compile Include="Abstraction\IDataFeedProxy.cs" />
+    <Compile Include="Abstraction\IDataFeedCore.cs" />
+    <Compile Include="Abstraction\IDataFeedQueryBuilder.cs" />
+    <Compile Include="Abstraction\IDataFeedSaver.cs" />
+    <Compile Include="Abstraction\IRequest.cs" />
     <Compile Include="Models\Parameters.cs" />
     <Compile Include="Helpers\PathHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -1,16 +1,29 @@
-﻿using System;
-using System.Net.Sockets;
+﻿#region FileHeader
 
-using log4net;
+// File:
+// MarketDataDownloader/IQFeed/IQFeedProxy.cs
+// 
+// Last updated:
+// 2013-05-23 11:29 AM
+
+#endregion
+
+#region Usings
+
+using System;
+using System.Net.Sockets;
+using MarketDataDownloader.DomainLogicLayer.Abstraction;
+using MarketDataDownloader.Logging;
+
+#endregion
 
 namespace IQFeed.Core
 {
-	public class IQFeedProxy
+	public class IQFeedProxy : IDataFeedProxy
 	{
-		private TcpClient _socket;
-		private readonly ILog _logger;
+		private readonly IMyLogger _logger;
 
-		public IQFeedProxy(ILog logger)
+		public IQFeedProxy(IMyLogger logger)
 		{
 			if (logger == null) throw new ArgumentNullException("logger");
 
@@ -19,26 +32,26 @@ namespace IQFeed.Core
 
 		public TcpClient Connect()
 		{
+			var socket = new TcpClient();
+
 			try
 			{
-				_socket = new TcpClient(IQFeedConfiguration.IQFeedHostName, IQFeedConfiguration.IQFeedHistoryPort);
+				socket = new TcpClient(IQFeedConfiguration.IQFeedHostName, IQFeedConfiguration.IQFeedHistoryPort);
 			}
 			catch (SocketException ex)
 			{
 				_logger.Error(ex.Message);
 			}
 
-			return _socket;
+			return socket;
 		}
 
-		public NetworkStream CreateNetworkStream()
+		public NetworkStream CreateNetworkStream(TcpClient socket)
 		{
-			if (_socket == null)
-			{
-				Connect();
-			}
+			if (socket == null) throw new ArgumentNullException("socket");
+			if (!socket.Connected) throw new ArgumentNullException("socket");
 
-			NetworkStream networkStream = _socket.GetStream();
+			var networkStream = socket.GetStream();
 
 			if (!networkStream.CanRead && !networkStream.CanWrite)
 			{

@@ -1,37 +1,31 @@
 ﻿using System;
 using System.Globalization;
+
 using IQFeed.Models;
 
 namespace IQFeed.Helpers
 {
 	public class IQFeedResponseHelper
 	{
-		private readonly IQFeedResponse _response;
-
-		public IQFeedResponseHelper(IQFeedResponse response)
-		{
-			if (response == null) throw new ArgumentNullException("response");
-
-			_response = response;
-		}
-
 		public IQFeedResponse ParseTickMarketData(string[] input)
 		{
 			if (input == null) throw new ArgumentNullException("input");
 			if (input.Length != 10) throw new ArgumentException("input.Length");
 
-			_response.RequestId = input[0];
-			_response.Last = input[2];
-			_response.LastSize = input[3];
-			_response.TotalVolume = input[4];
-			_response.Bid = input[5];
-			_response.Ask = input[6];
-			_response.TickId = input[7];
-			_response.BidSize = input[8];
-			_response.AskSize = input[9];
-			_response.TradeType = input[10];
+			IQFeedResponse response = new IQFeedResponse();
 
-			return _response;
+			response.RequestId = input[0];
+			response.Last = input[2];
+			response.LastSize = input[3];
+			response.TotalVolume = input[4];
+			response.Bid = input[5];
+			response.Ask = input[6];
+			response.TickId = input[7];
+			response.BidSize = input[8];
+			response.AskSize = input[9];
+			response.TradeType = input[10];
+
+			return response;
 		}
 
 		public IQFeedResponse ParseMarketData(string[] input)
@@ -39,18 +33,20 @@ namespace IQFeed.Helpers
 			if (input == null) throw new ArgumentNullException("input");
 			if (input.Length != 7) throw new ArgumentException("input.Length");
 
-			_response.RequestId = input[0];
-			_response.High = input[2];
-			_response.Low = input[3];
-			_response.Open = input[4];
-			_response.Close = input[5];
-			_response.OpenInterest = input[6];
-			_response.Volume = input[7];
+			IQFeedResponse response = new IQFeedResponse();
 
-			return _response;
+			response.RequestId = input[0];
+			response.High = input[2];
+			response.Low = input[3];
+			response.Open = input[4];
+			response.Close = input[5];
+			response.OpenInterest = input[6];
+			response.Volume = input[7];
+
+			return response;
 		}
 
-		public string ParseDateTime(string[] input, string delimiter, string timeFormat, string dateFormat)
+		public string ParseDateTime(string[] input, string delimiter, string dateFormat, string timeFormat)
 		{
 			if (input == null) throw new ArgumentNullException("input");
 			if (string.IsNullOrEmpty(delimiter)) throw new ArgumentNullException("delimiter");
@@ -63,16 +59,6 @@ namespace IQFeed.Helpers
 			return date + delimiter + time;
 		}
 
-		private string ParseTime(string input, string timeFormat)
-		{
-			string time = input.Substring(11, 5);
-
-			IFormatProvider format = new DateTimeFormatInfo();
-			format.GetFormat(timeFormat.GetType());
-
-			return Convert.ToDateTime(time, format).ToShortTimeString();
-		}
-
 		private string ParseDate(string input, string dateFormat)
 		{
 			string date = input.Substring(0, 4) + input.Substring(5, 2) + input.Substring(8, 2);
@@ -81,6 +67,16 @@ namespace IQFeed.Helpers
 			format.GetFormat(dateFormat.GetType());
 
 			return Convert.ToDateTime(date, format).ToShortDateString();
+		}
+
+		private string ParseTime(string input, string timeFormat)
+		{
+			string time = input.Substring(11, 5);
+
+			IFormatProvider format = new DateTimeFormatInfo();
+			format.GetFormat(timeFormat.GetType());
+
+			return Convert.ToDateTime(time, format).ToShortTimeString();
 		}
 	}
 }

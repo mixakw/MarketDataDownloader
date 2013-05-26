@@ -8,7 +8,5 @@
 		public string DateFormat { get; set; }
 		public string TimeFormat { get; set; }
 		public string DateTimeDelimeter { get; set; }
-
-		public bool IsRealTime { get; set; }
 	}
 }

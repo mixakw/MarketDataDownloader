@@ -2,7 +2,7 @@
 
 namespace IQFeed.Models
 {
-	public class IQFeedResponse : BaseResponse
+	public class IQFeedResponse : IResponse
 	{
 		public string RequestId { get; set; }
 		public string High { get; set; }

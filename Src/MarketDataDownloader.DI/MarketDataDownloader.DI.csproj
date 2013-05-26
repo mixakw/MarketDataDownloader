@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>MarketDataDownloader.DI</RootNamespace>
     <AssemblyName>MarketDataDownloader.DI</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -29,10 +30,11 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net">
-      <HintPath>..\MarketDataDownloader.Tests\bin\Debug\log4net.dll</HintPath>
+      <HintPath>..\packages\log4net.2.0.0\lib\net40-full\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Practices.ServiceLocation">
       <HintPath>..\packages\CommonServiceLocator.1.0\lib\NET35\Microsoft.Practices.ServiceLocation.dll</HintPath>
@@ -54,12 +56,25 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CompositionRoot.cs" />
-    <Compile Include="ContainerExtension.cs" />
+    <Compile Include="DependencyFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DataFeeds\IQFeed\IQFeed.csproj">
+      <Project>{d90e3225-1a6c-4164-9669-a6bfb4b7f6b5}</Project>
+      <Name>IQFeed</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\MarketDataDownloader.DomainLogicLayer\MarketDataDownloader.DomainLogicLayer.csproj">
+      <Project>{6E1F6270-7BFF-4FC2-B22C-16F8FF0AE970}</Project>
+      <Name>MarketDataDownloader.DomainLogicLayer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\MarketDataDownloader.Logging\MarketDataDownloader.Logging.csproj">
+      <Project>{CB1ADEF1-C238-482F-B2AC-CFC9C5558D03}</Project>
+      <Name>MarketDataDownloader.Logging</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

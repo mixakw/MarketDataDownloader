@@ -1,4 +1,7 @@
-﻿using Microsoft.Practices.Unity;
+﻿using IQFeed.Core;
+using MarketDataDownloader.DomainLogicLayer.Abstraction;
+using MarketDataDownloader.DomainLogicLayer.Logger;
+using Microsoft.Practices.Unity;
 using log4net;
 
 namespace MarketDataDownloader.DI
@@ -7,14 +10,17 @@ namespace MarketDataDownloader.DI
 	{
 		protected override void Initialize()
 		{
-			Container.RegisterType<ILog>(new InjectionFactory(x => LogManager.GetLogger(typeof(IQFeedProxy))));
-			Container.RegisterType<IQFeedProxy>();
+			Container.RegisterType<ILog>(new InjectionFactory(x => LogManager.GetLogger(typeof(IDataFeedCore))));
+			Container.RegisterType<ILog>(new InjectionFactory(x => LogManager.GetLogger(typeof(IDataFeedProxy))));
+			Container.RegisterType<ILog>(new InjectionFactory(x => LogManager.GetLogger(typeof(IDataFeedQueryBuilder))));
+			Container.RegisterType<ILog>(new InjectionFactory(x => LogManager.GetLogger(typeof(IDataFeedSaver))));
 
-			//this.Container.RegisterType<BasketRepository, SqlBasketRepository>(new PerResolveLifetimeManager(), sqlCtorParam);
-			//this.Container.RegisterType<DiscountRepository, SqlDiscountRepository>(new PerResolveLifetimeManager(), sqlCtorParam);
-			//this.Container.RegisterType<BasketDiscountPolicy, RepositoryBasketDiscountPolicy>(new PerResolveLifetimeManager());
-			//this.Container.RegisterType<IBasketService, BasketService>(new PerResolveLifetimeManager());
-			//this.Container.RegisterType<CurrencyProvider, SqlCurrencyProvider>(new PerResolveLifetimeManager(), sqlCtorParam);
+			Container.RegisterType<LoggerResolver>(new InjectionFactory(x => LogManager.GetLogger(typeof(IDataFeedSaver))));
+
+			Container.RegisterType<IDataFeedCore, IQFeedCore>(new ContainerControlledLifetimeManager());
+			Container.RegisterType<IDataFeedProxy, IQFeedProxy>(new ContainerControlledLifetimeManager());
+			Container.RegisterType<IDataFeedQueryBuilder, IQFeedQueryBuilder>(new ContainerControlledLifetimeManager());
+			Container.RegisterType<IDataFeedSaver, IQFeedDataSaver>(new ContainerControlledLifetimeManager());
 		}
 	}
 }

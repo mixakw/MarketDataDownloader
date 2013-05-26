@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-
 using IQFeed.Helpers;
 using IQFeed.Models;
+using MarketDataDownloader.DomainLogicLayer.Abstraction;
 using MarketDataDownloader.DomainLogicLayer.Models;
 
 namespace IQFeed.Core
 {
-	public class IQFeedDataSaver
+	public class IQFeedDataSaver : IDataFeedSaver
 	{
 		private readonly IQFeedResponseHelper _responseHelper;
 		private readonly Parameters _parameters;
@@ -24,16 +24,16 @@ namespace IQFeed.Core
 			_dlm = _parameters.OutputDelimiter;
 		}
 
-		public void SaveData(IQFeedRequest request, StreamWriter writer, IList<string> inputData)
+		public void SaveData(IQFeedRequest request, StreamWriter writer, IList<string> data)
 		{
-			if (inputData.Count == 0 || inputData[0].Substring(0, 1) == "!")
+			if (data.Count == 0 || data[0].Substring(0, 1) == "!")
 				return;
 
 			using (writer)
 			{
-				foreach (var input in inputData)
+				foreach (var d in data)
 				{
-					var data = input.Split(',');
+					var line = d.Split(',');
 
 					IQFeedResponse response;
 					string dateTime;
@@ -53,8 +53,11 @@ namespace IQFeed.Core
 						//Ask Size. Integer. Example: 100
 						//Basis For Last. Character. Current Possible values are 'C' (normal trade) or 'E' (extended trade). 
 						case "Tick Days":
-							response = _responseHelper.ParseTickMarketData(data);
-							dateTime =_responseHelper.ParseDateTime(data, _parameters);
+							response = _responseHelper.ParseTickMarketData(line);
+							dateTime = _responseHelper.ParseDateTime(line,
+																	_parameters.DateTimeDelimeter,
+																	_parameters.DateFormat,
+																	_parameters.TimeFormat);
 
 							writer.WriteLine(response.TickId + _dlm +
 											 response.TradeType + _dlm +
@@ -80,8 +83,10 @@ namespace IQFeed.Core
 						//Ask Size. Integer. Example: 100
 						//Basis For Last. Character. Current Possible values are 'C' (normal trade) or 'E' (extended trade).
 						case "Tick Interval":
-							response = _responseHelper.ParseTickMarketData(data);
-							dateTime = _responseHelper.ParseDateTime(data, _parameters);
+							response = _responseHelper.ParseTickMarketData(line);
+							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
+																	_parameters.DateFormat,
+																	_parameters.TimeFormat);
 
 							writer.WriteLine(response.TickId + _dlm +
 											 response.TradeType + _dlm +
@@ -104,8 +109,10 @@ namespace IQFeed.Core
 						//Total Volume.	Integer. Example: 1285001
 						//Period Volume. Integer. Example: 1285
 						case "Intraday Days":
-							response = _responseHelper.ParseMarketData(data);
-							dateTime = _responseHelper.ParseDateTime(data, _parameters);
+							response = _responseHelper.ParseMarketData(line);
+							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
+																	_parameters.DateFormat,
+																	_parameters.TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
@@ -125,8 +132,10 @@ namespace IQFeed.Core
 						//Total Volume.	Integer. Example: 1285001
 						//Period Volume. Integer. Example: 1285
 						case "Intraday Interval":
-							response = _responseHelper.ParseMarketData(data);
-							dateTime = _responseHelper.ParseDateTime(data, _parameters);
+							response = _responseHelper.ParseMarketData(line);
+							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
+																	_parameters.DateFormat,
+																	_parameters.TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
@@ -146,8 +155,10 @@ namespace IQFeed.Core
 						//Period Volume. Integer. Example: 1285001
 						//Open Interest. Integer. Example: 128
 						case "Daily Days":
-							response = _responseHelper.ParseMarketData(data);
-							dateTime = _responseHelper.ParseDateTime(data, _parameters);
+							response = _responseHelper.ParseMarketData(line);
+							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
+																	_parameters.DateFormat,
+																	_parameters.TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
@@ -168,8 +179,10 @@ namespace IQFeed.Core
 						//Period Volume. Integer. Example: 1285001
 						//Open Interest. Integer. Example: 128
 						case "Daily Interval":
-							response = _responseHelper.ParseMarketData(data);
-							dateTime = _responseHelper.ParseDateTime(data, _parameters);
+							response = _responseHelper.ParseMarketData(line);
+							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
+																	_parameters.DateFormat,
+																	_parameters.TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
@@ -190,8 +203,10 @@ namespace IQFeed.Core
 						//Period Volume. Integer. Example: 1285001
 						//Open Interest. Integer. Example: 128
 						case "Weekly Days":
-							response = _responseHelper.ParseMarketData(data);
-							dateTime = _responseHelper.ParseDateTime(data, _parameters);
+							response = _responseHelper.ParseMarketData(line);
+							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
+																	_parameters.DateFormat,
+																	_parameters.TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
@@ -212,8 +227,10 @@ namespace IQFeed.Core
 						//Period Volume. Integer. Example: 1285001
 						//Open Interest. Integer. Example: 128
 						case "Monthly Days":
-							response = _responseHelper.ParseMarketData(data);
-							dateTime = _responseHelper.ParseDateTime(data, _parameters);
+							response = _responseHelper.ParseMarketData(line);
+							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
+																	_parameters.DateFormat,
+																	_parameters.TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
