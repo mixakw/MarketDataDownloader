@@ -5,14 +5,14 @@ using IQFeed.Helpers;
 using IQFeed.Models;
 using MarketDataDownloader.DomainLogicLayer.Abstraction;
 using MarketDataDownloader.DomainLogicLayer.Models;
-
+using System.Globalization;
 namespace IQFeed.Core
 {
 	public class IQFeedDataSaver : IDataFeedSaver
 	{
 		private readonly IQFeedResponseHelper _responseHelper;
-		private readonly Parameters _parameters;
-		private readonly string _dlm;
+		private  Parameters _parameters;
+		private  string _dlm;
 
 		public IQFeedDataSaver(IQFeedResponseHelper responseHelper, Parameters parameters)
 		{
@@ -24,13 +24,42 @@ namespace IQFeed.Core
 			_dlm = _parameters.OutputDelimiter;
 		}
 
-		public void SaveData(IQFeedRequest request, StreamWriter writer, IList<string> data)
+        public void SetProgramParameters(Parameters parameters){
+        if (parameters == null) throw new ArgumentNullException("parameters");
+            	_parameters = parameters;
+                _dlm = _parameters.OutputDelimiter;
+        }
+
+
+        DateTimeFormatInfo GetTimeFormat()
+        {
+            DateTimeFormatInfo format = new DateTimeFormatInfo();
+            format.LongTimePattern = _parameters.TimeFormat;
+            format.ShortTimePattern = _parameters.TimeFormat;
+            return format;      
+        }
+
+        DateTimeFormatInfo GetDateFormat()
+        {
+            DateTimeFormatInfo format = new DateTimeFormatInfo();
+            format.LongDatePattern = _parameters.DateFormat;
+            format.ShortDatePattern = _parameters.DateFormat;
+            return format; 
+        }
+
+        public void SaveData(IQFeedRequest request, ref StreamWriter writer, IList<string> data )
 		{
 			if (data.Count == 0 || data[0].Substring(0, 1) == "!")
 				return;
 
-			using (writer)
-			{
+			if (string.IsNullOrEmpty(_parameters.TimeFormat)) throw new ArgumentNullException("timeFormat");
+			DateTimeFormatInfo DateFormat=GetDateFormat();
+            if (string.IsNullOrEmpty(_parameters.DateFormat)) throw new ArgumentNullException("dateFormat");
+            DateTimeFormatInfo TimeFormat=GetTimeFormat();
+            
+            
+           // using (writer)
+			//{
 				foreach (var d in data)
 				{
 					var line = d.Split(',');
@@ -56,18 +85,18 @@ namespace IQFeed.Core
 							response = _responseHelper.ParseTickMarketData(line);
 							dateTime = _responseHelper.ParseDateTime(line,
 																	_parameters.DateTimeDelimeter,
-																	_parameters.DateFormat,
-																	_parameters.TimeFormat);
+                                                                    DateFormat,
+																	TimeFormat);
 
-							writer.WriteLine(response.TickId + _dlm +
-											 response.TradeType + _dlm +
-											 dateTime + _dlm +
+							writer.WriteLine( dateTime + _dlm +
 											 response.Last + _dlm +
 											 response.LastSize + _dlm +
 											 response.Bid + _dlm +
 											 response.Ask + _dlm +
 											 response.BidSize + _dlm +
-											 response.AskSize + _dlm);
+											 response.AskSize + _dlm+
+                                             response.TickId + _dlm +
+											 response.TradeType + _dlm );
 							break;
 
 						//"HTT"
@@ -84,19 +113,17 @@ namespace IQFeed.Core
 						//Basis For Last. Character. Current Possible values are 'C' (normal trade) or 'E' (extended trade).
 						case "Tick Interval":
 							response = _responseHelper.ParseTickMarketData(line);
-							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
-																	_parameters.DateFormat,
-																	_parameters.TimeFormat);
+							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,DateFormat,TimeFormat);
 
-							writer.WriteLine(response.TickId + _dlm +
-											 response.TradeType + _dlm +
-											 dateTime + _dlm +
+							writer.WriteLine(dateTime + _dlm +
 											 response.Last + _dlm +
 											 response.LastSize + _dlm +
 											 response.Bid + _dlm +
 											 response.Ask + _dlm +
 											 response.BidSize + _dlm +
-											 response.AskSize + _dlm);
+                                             response.AskSize + _dlm + 
+                                             response.TickId + _dlm +
+                                             response.TradeType + _dlm);
 							break;
 
 						//"HID"
@@ -111,8 +138,8 @@ namespace IQFeed.Core
 						case "Intraday Days":
 							response = _responseHelper.ParseMarketData(line);
 							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
-																	_parameters.DateFormat,
-																	_parameters.TimeFormat);
+																	DateFormat,
+																	TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
@@ -134,8 +161,8 @@ namespace IQFeed.Core
 						case "Intraday Interval":
 							response = _responseHelper.ParseMarketData(line);
 							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
-																	_parameters.DateFormat,
-																	_parameters.TimeFormat);
+																	DateFormat,
+																TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
@@ -157,8 +184,8 @@ namespace IQFeed.Core
 						case "Daily Days":
 							response = _responseHelper.ParseMarketData(line);
 							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
-																	_parameters.DateFormat,
-																	_parameters.TimeFormat);
+																	DateFormat,
+																	TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
@@ -181,8 +208,8 @@ namespace IQFeed.Core
 						case "Daily Interval":
 							response = _responseHelper.ParseMarketData(line);
 							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
-																	_parameters.DateFormat,
-																	_parameters.TimeFormat);
+															DateFormat,
+																	TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
@@ -205,8 +232,8 @@ namespace IQFeed.Core
 						case "Weekly Days":
 							response = _responseHelper.ParseMarketData(line);
 							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
-																	_parameters.DateFormat,
-																	_parameters.TimeFormat);
+																	DateFormat,
+																TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
@@ -229,8 +256,8 @@ namespace IQFeed.Core
 						case "Monthly Days":
 							response = _responseHelper.ParseMarketData(line);
 							dateTime = _responseHelper.ParseDateTime(line, _parameters.DateTimeDelimeter,
-																	_parameters.DateFormat,
-																	_parameters.TimeFormat);
+																	DateFormat,
+																	TimeFormat);
 
 							writer.WriteLine(dateTime + _dlm +
 											 response.Open + _dlm +
@@ -242,7 +269,8 @@ namespace IQFeed.Core
 							break;
 					}
 				}
-			}
-		}
+			//}
+                writer.Flush();
+        }
 	}
 }

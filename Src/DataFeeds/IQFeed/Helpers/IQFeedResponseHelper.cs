@@ -10,73 +10,82 @@ namespace IQFeed.Helpers
 		public IQFeedResponse ParseTickMarketData(string[] input)
 		{
 			if (input == null) throw new ArgumentNullException("input");
-			if (input.Length != 10) throw new ArgumentException("input.Length");
+			if (input.Length != 11) throw new ArgumentException("input.Length");
 
 			IQFeedResponse response = new IQFeedResponse();
 
-			response.RequestId = input[0];
-			response.Last = input[2];
-			response.LastSize = input[3];
-			response.TotalVolume = input[4];
-			response.Bid = input[5];
-			response.Ask = input[6];
-			response.TickId = input[7];
-			response.BidSize = input[8];
-			response.AskSize = input[9];
-			response.TradeType = input[10];
+			//response.RequestId = input[0];
+			response.Last = input[1];
+			response.LastSize = input[2];
+			response.TotalVolume = input[3];
+			response.Bid = input[4];
+			response.Ask = input[5];
+			response.TickId = input[6];
+			response.BidSize = input[7];
+			response.AskSize = input[8];
+			response.TradeType = input[9];
 
 			return response;
 		}
 
 		public IQFeedResponse ParseMarketData(string[] input)
 		{
-			if (input == null) throw new ArgumentNullException("input");
-			if (input.Length != 7) throw new ArgumentException("input.Length");
+		
+            if (input == null) throw new ArgumentNullException("input");
+			if (input.Length != 8) throw new ArgumentException("input.Length");
 
 			IQFeedResponse response = new IQFeedResponse();
 
-			response.RequestId = input[0];
-			response.High = input[2];
-			response.Low = input[3];
-			response.Open = input[4];
-			response.Close = input[5];
-			response.OpenInterest = input[6];
-			response.Volume = input[7];
+			//response.RequestId = input[0];
+			response.High = input[1];
+			response.Low = input[2];
+			response.Open = input[3];
+			response.Close = input[4];
+			response.OpenInterest = input[5];
+			response.Volume = input[6];
 
 			return response;
-		}
+		
+        
+        }
 
-		public string ParseDateTime(string[] input, string delimiter, string dateFormat, string timeFormat)
+        public string ParseDateTime(string[] input, string delimiter, DateTimeFormatInfo DateFormat, DateTimeFormatInfo TimeFormat)
 		{
 			if (input == null) throw new ArgumentNullException("input");
 			if (string.IsNullOrEmpty(delimiter)) throw new ArgumentNullException("delimiter");
-			if (string.IsNullOrEmpty(timeFormat)) throw new ArgumentNullException("timeFormat");
-			if (string.IsNullOrEmpty(dateFormat)) throw new ArgumentNullException("dateFormat");
+			
 
-			string date = ParseDate(input[1], dateFormat);
-			string time = ParseTime(input[1], timeFormat);
+			string date = ParseDate(input[0], DateFormat);
+			string time = ParseTime(input[0], TimeFormat);
 
 			return date + delimiter + time;
 		}
 
-		private string ParseDate(string input, string dateFormat)
+        private string ParseDate(string input, DateTimeFormatInfo DateFormat)
 		{
-			string date = input.Substring(0, 4) + input.Substring(5, 2) + input.Substring(8, 2);
+			//string date = input.Substring(0, 4) + input.Substring(5, 2) + input.Substring(8, 2);
 
-			IFormatProvider format = new DateTimeFormatInfo();
-			format.GetFormat(dateFormat.GetType());
-
-			return Convert.ToDateTime(date, format).ToShortDateString();
+            string date = input.Substring(0, 10);
+            DateTime dateValue = DateTime.Parse(date);
+            //IFormatProvider format = new DateTimeFormatInfo();
+			//format.GetFormat(dateFormat.GetType());
+            return dateValue.ToString("d", DateFormat);
+			//return Convert.ToDateTime(date, format).ToShortDateString();
 		}
 
-		private string ParseTime(string input, string timeFormat)
+        private string ParseTime(string input, DateTimeFormatInfo timeFormat)
 		{
-			string time = input.Substring(11, 5);
+            if (input.Length < 11) return "";
+                string time = input.Substring(11);
 
-			IFormatProvider format = new DateTimeFormatInfo();
-			format.GetFormat(timeFormat.GetType());
+            DateTime dateValue = DateTime.Parse(time);
 
-			return Convert.ToDateTime(time, format).ToShortTimeString();
+          //  DateTimeFormatInfo format = new DateTimeFormatInfo();
+           // format.LongTimePattern = timeFormat;
+           // format.ShortTimePattern = timeFormat;
+           // format.GetFormat(timeFormat.GetType());
+            return dateValue.ToString("T", timeFormat);
+          //  return Convert.ToDateTime(dateValue, format).ToLongTimeString();
 		}
 	}
 }

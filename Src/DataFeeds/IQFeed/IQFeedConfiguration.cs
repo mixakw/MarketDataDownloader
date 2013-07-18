@@ -21,10 +21,14 @@ namespace IQFeed
 		public static string NoDataError = "NO_DATA";
 		public static string EndMessage = "ENDMSG";
 		public static string SyntaxError = "SYNTAX_ERROR";
-		public static string InvalidSymbolError = "Invalid symbol";
-
-		public static string IQFeedHostName = "127.0.0.1";
+        public static string Current50Protocol = "S,CURRENT PROTOCOL,5.0";
+        public static string InvalidSymbolError = "Invalid symbol";
+        public static string CantConnectHistorySocket = "Could not connect to History socket";
+        public static string CantConnectSymbolLookupSocket = "Could not connect to SymbolLookup socket";
+        public static string IQFeedHostName = "127.0.0.1";
 		public static int IQFeedHistoryPort = 9100;
+        public static int IQFeedLevel1Port = 9100;
+
 
 		public static byte EOL = 0x0;
 

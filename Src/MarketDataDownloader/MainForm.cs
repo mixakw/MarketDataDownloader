@@ -9,6 +9,8 @@
 #region Usings
 
 using System;
+using System.IO;
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -27,7 +29,7 @@ using MarketDataDownloader.Logging;
 using MarketDataDownloader.UI.Properties;
 
 using Microsoft.Practices.Unity;
-
+using System.Security.AccessControl;
 #endregion
 
 namespace MarketDataDownloader.UI
@@ -35,12 +37,14 @@ namespace MarketDataDownloader.UI
 	public partial class MainForm : Form
 	{
 		private TcpClient _client;
-		private IQFeedCore _core;
+		
+        private IQFeedCore _core;
 
 		private CancellationTokenSource _cts;
 		private MyLogger _logger;
 		private NetworkStream _network;
-		private IProgress<KeyValuePair<string, string>> _progress;
+        private NetworkStream _networkLevel1;
+        private IProgress<KeyValuePair<string, string>> _progress;
 		private IQFeedProxy _proxy;
 		private IQFeedQueryBuilder _queryBuilder;
 
@@ -50,9 +54,10 @@ namespace MarketDataDownloader.UI
 
 			InitVariables();
 			ConnectToDataFeed();
-			SetDefaultValues();
+            SetDefaultValues();
 			InitAsyncRelated();
-		}
+		 
+        }
 
 		private void InitVariables()
 		{
@@ -73,7 +78,7 @@ namespace MarketDataDownloader.UI
 			parameters.DateFormat = cbDate.Text;
 			parameters.DateTimeDelimeter = cbDateTimeSeparator.Text;
 			parameters.TimeFormat = cbTime.Text;
-			parameters.OutputDelimiter = "";
+			parameters.OutputDelimiter = FieldDelimiter.Text;
 
 			return parameters;
 		}
@@ -97,11 +102,12 @@ namespace MarketDataDownloader.UI
 
 			request.TimeFrameName = cbTimeframe.SelectedItem.ToString();
 
-			request.BeginDate = dtpBeginDate.Value.ToLongDateString();
-			request.EndDate = dtpEndDate.Value.ToLongDateString();
-			request.BeginTime = dtpBeginTime.Value.ToLongTimeString();
-			request.EndTime = dtpEndTime.Value.ToLongTimeString();
-
+            request.BeginDate = dtpBeginDate.Value.ToString("yyyyMMdd");
+            request.EndDate = dtpEndDate.Value.ToString("yyyyMMdd");
+            request.BeginTime = dtpBeginTime.Value.ToString("HHmmss");
+            request.EndTime = dtpEndTime.Value.ToString("HHmmss");
+            
+            
 			request.Days = tbAmountOfDays.Text;
 
 			int interval;
@@ -113,7 +119,7 @@ namespace MarketDataDownloader.UI
 
 			
 
-			request.DataDirection = "";
+			request.DataDirection = "1";
 			request.DatapointsPerSend = "";
 			request.MaxDatapoints = "";
 			request.RequestID = "";
@@ -121,24 +127,38 @@ namespace MarketDataDownloader.UI
 			return request;
 		}
 
-		private async void BtnStartClick(object sender, EventArgs e)
+      
+
+
+     
+
+        private async void BtnStartClick(object sender, EventArgs e)
 		{
-			LoadRequestParameters();
-			LockControls();
+            try
+            {
+                LoadRequestParameters();
+                LockControls();
 
-			if (CheckSavePath() && CheckConnection())
-			{
-				var programParameters = LoadProgramParameters();
-				var requestParameters = LoadRequestParameters();
+                if (CheckSavePath() && CheckConnection())
+                {
+                    var programParameters = LoadProgramParameters();
+                    var requestParameters = LoadRequestParameters();
+          
+                    var result = await DownloadDataAsync(programParameters, requestParameters);
+           
+                    _progress.Report(new KeyValuePair<string, string>("INFO", result));
+                }
 
-				var result = await DownloadDataAsync(programParameters, requestParameters);
-				_progress.Report(new KeyValuePair<string, string>("INFO", result));
-			}
-
-			UnlockControls();
-
-			_logger.Info("Done");
-		}
+                UnlockControls();
+         
+                _logger.Info("Done");
+            }
+            catch (Exception ex)
+            {
+                _logger.Info("BtnStartClick_Exception");
+                _logger.Info(ex.ToString());
+            }
+        }
 
 		private void InitAsyncRelated()
 		{
@@ -146,39 +166,94 @@ namespace MarketDataDownloader.UI
 			_progress = new Progress<KeyValuePair<string, string>>(ReportProgress);
 		}
 
-		private async Task<string> DownloadDataAsync(Parameters programParameters, IRequest requestParameters)
+        private string DownloadData(Parameters programParameters, IRequest requestParameters)
+        {
+            
+                foreach (var symbol in requestParameters.Symbols)
+                {
+
+                    List<string> Symbols=new  List<string>();
+                    if (chbOptions.Checked)
+                    {
+                        Symbols = _core.GetOptionsSymbol(symbol, _network);
+                    }
+                    else
+                    {
+                        Symbols.Add(symbol);
+                    }
+
+                    int count = 0;
+
+                    foreach (var lsymbol in Symbols)
+                    {
+                        requestParameters.CurrentSymbol = lsymbol;
+                        if (chbOptions.Checked)
+                        {
+                            count += 1;
+                         //   _progress.Report(new KeyValuePair<string, string>("INFO", String.Format("Option Symbol {0} from #{1}", count, Symbols.Count)));
+                            _logger.Info("INFO:"+ String.Format("Option Symbol {0} from #{1}", count, Symbols.Count));
+                        }
+
+                        if (_cts.IsCancellationRequested)
+                        {
+                         //   _progress.Report(new KeyValuePair<string, string>("INFO", "Stopping proccess..."));
+                            _logger.Info("INFO:Stopping proccess...");
+                            break;
+                        }
+                        else
+                        {
+                      
+                          //  _progress.Report(new KeyValuePair<string, string>("INFO", String.Format("Symbol {0}", requestParameters.CurrentSymbol)));
+                            _logger.Info("INFO:" + String.Format("Symbol {0}", requestParameters.CurrentSymbol));
+
+                            UploadAndProcess(programParameters, requestParameters);
+                        }
+
+                    }
+                }
+
+
+                return "Done";
+        
+        }
+        
+         
+        
+        
+        private async Task<string> DownloadDataAsync(Parameters programParameters, IRequest requestParameters)
+        {
+            return await Task.Run<string>(() => DownloadData(programParameters, requestParameters));
+           //return  DownloadData(programParameters, requestParameters);
+          
+        }
+
+		public  void UploadAndProcess(Parameters programParameters, IRequest requestParameters)
 		{
-			await Task.Factory.StartNew(() =>
-			{
-				while (chbRealtime.Checked && !_cts.IsCancellationRequested)
-				{
-					foreach (var symbol in requestParameters.Symbols)
-					{
-						requestParameters.CurrentSymbol = symbol;
 
-						if (_cts.IsCancellationRequested)
-						{
-							_progress.Report(new KeyValuePair<string, string>("INFO", "Stopping proccess..."));
-						}
-						else
-						{
-							_progress.Report(new KeyValuePair<string, string>("INFO", String.Format("Symbol {0}", requestParameters.CurrentSymbol)));
-							UploadAndProcess(programParameters, requestParameters);
-						}
 
-						_cts.Token.ThrowIfCancellationRequested();
-					}
-				}
-			});
+            if (chbBeginDate.Checked)
+            {
+                DateTime LastDateTime = GetLastDateFromFile(tbFolder.Text, requestParameters.CurrentSymbol, programParameters);
+                if (LastDateTime !=default(DateTime))
+                {
+                   LastDateTime= LastDateTime.AddSeconds(1);
+                    requestParameters.TimeFrameType = "Interval";
+                    requestParameters.BeginDate = LastDateTime.ToString("yyyyMMdd");
+                    requestParameters.EndDate = dtpEndDate.Value.ToString("yyyyMMdd");
+                    requestParameters.BeginTime = LastDateTime.ToString("HHmmss");
+                    requestParameters.EndTime = dtpEndTime.Value.ToString("HHmmss");
+                  
+                }
+                }
+      
+            var query = _queryBuilder.CreateQuery(requestParameters);
+            ConnectToDataFeed();
+            
 
-			return "Done";
-		}
+            
+            _core.GetData(query, tbFolder.Text,programParameters, (IQFeedRequest)requestParameters, _network);
 
-		public void UploadAndProcess(Parameters programParameters, IRequest requestParameters)
-		{
-			var query = _queryBuilder.CreateQuery(requestParameters);
-			_core.GetData(query, tbFolder.Text, (IQFeedRequest)requestParameters, _network);
-		}
+        }
 
 		private void ReportProgress(KeyValuePair<string, string> type)
 		{
@@ -201,12 +276,46 @@ namespace MarketDataDownloader.UI
 
 		#region Controls
 
+
+        private bool CheckDirectoryAccessControl(string directoryPath){
+          
+           bool isWriteAccess = false;
+           try
+           {
+              AuthorizationRuleCollection collection = Directory.GetAccessControl(directoryPath).GetAccessRules(true, true, typeof(System.Security.Principal.NTAccount));
+              foreach (FileSystemAccessRule rule in collection)
+              {
+                 if (rule.AccessControlType == AccessControlType.Allow)
+                 {
+                    isWriteAccess = true;
+                    break;
+                 }
+              }
+           }
+           catch (UnauthorizedAccessException ex)
+           {
+              isWriteAccess = false;
+
+              MessageBox.Show(ex.ToString());
+
+}
+           catch (Exception ex)
+           {
+              isWriteAccess = false;
+              MessageBox.Show(ex.ToString());
+           }
+           return isWriteAccess;
+        
+}
+
 		private void BtnChooseStoreFolderClick(object sender, EventArgs e)
 		{
 			var dialog = new FolderBrowserDialog();
 			dialog.ShowDialog();
 			tbFolder.Text = dialog.SelectedPath;
-		}
+
+         
+        }
 
 		private void BtnReconnectClick(object sender, EventArgs e)
 		{
@@ -358,8 +467,8 @@ namespace MarketDataDownloader.UI
 
 				case "Daily":
 					cbTimeframeIntraday.Enabled = false;
-					rbDays.Enabled = false;
-					tbAmountOfDays.Enabled = false;
+                    rbDays.Enabled = true;
+                    tbAmountOfDays.Enabled = true;
 					rbInterval.Enabled = false;
 
 					rbMainSession.Enabled = false;
@@ -408,7 +517,13 @@ namespace MarketDataDownloader.UI
 				isValid = false;
 			}
 
-			return isValid;
+            if (!CheckDirectoryAccessControl(tbFolder.Text))
+            {
+                tbFolder.Text = "";
+                isValid = false;
+            }
+            
+            return isValid;
 		}
 
 		private List<string> GetTickersList()
@@ -425,10 +540,40 @@ namespace MarketDataDownloader.UI
 			if (CheckConnection())
 			{
 				_network = _proxy.CreateNetworkStream(_client);
-			}
-		}
 
-		private bool CheckConnection()
+               
+            }
+
+           
+        }
+
+       
+        
+        public DateTime GetLastDateFromFile(string folder, string symbol,Parameters programParameters)
+        {
+            string[] SplitString;
+
+            var quotesfilepath = folder + @"\" + symbol + ".txt";
+            if (!File.Exists(quotesfilepath)) return new DateTime();
+            String last = File.ReadLines(quotesfilepath).Last();
+            DateTime LastDataTimeTick = new DateTime();
+            SplitString = last.Split(programParameters.OutputDelimiter.ToCharArray());
+            try
+            {
+                //LastDataTimeTick = DateTime.ParseExact(SplitString[0], "dd.MM.yyyy HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AllowWhiteSpaces);
+                LastDataTimeTick = DateTime.ParseExact(SplitString[0], programParameters.DateFormat + "" + programParameters.TimeFormat, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AllowWhiteSpaces);
+
+            }
+            catch (Exception e)
+            {
+                LastDataTimeTick = new DateTime();
+                _logger.Error("Can't parse last datetime from file.");
+            }
+
+            return LastDataTimeTick;
+        }
+       
+        private bool CheckConnection()
 		{
 			var isConnected = true;
 
@@ -452,8 +597,17 @@ namespace MarketDataDownloader.UI
 			return isConnected;
 		}
 
-		#endregion Connection
+        
+		
+        #endregion Connection
+
+        private void cbDate_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
 
 		#endregion Private Methods
+
+       
 	}
 }

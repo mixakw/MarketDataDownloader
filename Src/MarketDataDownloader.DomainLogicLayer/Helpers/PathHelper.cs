@@ -29,7 +29,9 @@ namespace MarketDataDownloader.DomainLogicLayer.Helpers
 			return new StreamWriter(fs);
 		}
 
-		private bool IsValidPath(string folder)
+		
+        
+        private bool IsValidPath(string folder)
 		{
 			char[] invalidPathChars = Path.GetInvalidPathChars();
 

@@ -46,7 +46,23 @@ namespace IQFeed.Core
 			return socket;
 		}
 
-		public NetworkStream CreateNetworkStream(TcpClient socket)
+        public TcpClient ConnectToLevel1()
+        {
+            var socket = new TcpClient();
+
+            try
+            {
+                socket = new TcpClient(IQFeedConfiguration.IQFeedHostName, IQFeedConfiguration.IQFeedLevel1Port);
+            }
+            catch (SocketException ex)
+            {
+                _logger.Error(ex.Message);
+            }
+
+            return socket;
+        }
+		
+        public NetworkStream CreateNetworkStream(TcpClient socket)
 		{
 			if (socket == null) throw new ArgumentNullException("socket");
 			if (!socket.Connected) throw new ArgumentNullException("socket");
